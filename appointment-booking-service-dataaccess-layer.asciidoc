@@ -108,7 +108,7 @@ Notice, how we are using *USER_TABLE* instead of just *USER* as a name. USER is 
 ==== _CLIENT_ table
 
 We will now add the CLIENT table in `/appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql`.  
-Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and USER_TABLE.  
+Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and USER_TABLE. We add the *ON DELETE CASCADE* clause, because Client can't exist without a User - and if the User is deleted, the Client should be removed as well.  
 
 [source,sql]
 ----
@@ -117,7 +117,7 @@ ID NUMBER(19,0) NOT NULL AUTO_INCREMENT,
 VERSION INTEGER NOT NULL,
 USER_ID NUMBER(19,0) NOT NULL,
 PRIMARY KEY (ID),
-FOREIGN KEY (USER_ID) REFERENCES USER_TABLE(ID)
+FOREIGN KEY (USER_ID) REFERENCES USER_TABLE(ID) ON DELETE CASCADE
 );
 ----
 
@@ -148,7 +148,7 @@ The table should contain following columns:
 We will also set the constraints:
 
 - primary key for ID to ensure uniqueness.
-- foreign key constraint linking USER_ID to the USER_TABLE.
+- foreign key constraint linking USER_ID to the USER_TABLE. Remember about *ON DELETE CASCADE* clause.
 
 ==== _TREATMENT_ table
 
@@ -161,9 +161,11 @@ CREATE TABLE TREATMENT (
 (...)
 SPECIALIST_ID NUMBER(19,0),
 (...)
-FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID)
+FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID) ON DELETE CASCADE
 );
 ----
+
+In this case, we also assume, that a treatment should be removed, if the specialist is removed.
 
 The table should contain following columns:
 
@@ -200,8 +202,8 @@ The table should contain following columns:
 We will also set the constraints:
 
 - primary key for ID to ensure uniqueness.
-- foreign key constraint linking CLIENT_ID to the CLIENT table.
-- foreign key constraint linking TREATMENT_ID to the TREATMENT table.
+- foreign key constraint linking CLIENT_ID to the CLIENT table - with *ON DELETE CASCADE* clause
+- foreign key constraint linking TREATMENT_ID to the TREATMENT table - with *ON DELETE CASCADE* clause
 
 A Client can book multiple Appointments, and a Treatment can have multiple Appointments, but each Appointment is linked to a single Client and a single Treatment.
 
@@ -311,12 +313,12 @@ public class UserEntity {
 Next to the UserEntity create ClientEntity. Mark the class with proper annotations. Prepare attributes as shown in the schema. For Id and Version use the same annotations, as in UserEntity.
  
 Now, lets implement the **uni-directional @OneToOne relationship** between the person and the task list. 
-ClientEntity will be the owner of the relationship. Add a private attribute of type UserEntity in ClientEntity. Mark it with @OneToOne annotation. 
+ClientEntity will be the owner of the relationship. Add a private attribute of type UserEntity in ClientEntity. Mark it with @OneToOne annotation and specify, that the relationship is not optional. Specify the cascade operations. 
 Additionally, you can add a @JoinColumn annotation, which will precisely describe what is the name of the Foreign Key column in the database in the CLIENT table, and which column it references in USER_TABLE table.
 
 [source,java]
 ----
-    @OneToOne
+    @OneToOne(optional = false, cascade = { CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE })
     @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
     private UserEntity user;
 ----
@@ -433,11 +435,11 @@ Mark it with `@ManyToOne` annotation and specify the foreign key column with `@J
 Even though _AppointmentEntity_ is the owner, we also want _ClientEntity_ to hold a reference to the appointments booked by a client.  
 
 Edit _ClientEntity_ and add a private attribute of type `List<AppointmentEntity>`.  
-Mark it with `@OneToMany`, specifying the mapped attribute, fetch type (`LAZY`), and cascade type.
+Mark it with `@OneToMany`, specifying the mapped attribute and cascade types. Add orphanRemoval=true, so that the Appointment will be removed, then the connection between Client and Appointment is broken.
 
 [source,java]
 ----
-@OneToMany(mappedBy = "client", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+@OneToMany(mappedBy = "client", cascade = { CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE }, orphanRemoval=true)
 private List<AppointmentEntity> appointments;
 ----
 
