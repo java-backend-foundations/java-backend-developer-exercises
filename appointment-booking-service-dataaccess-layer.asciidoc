@@ -205,6 +205,7 @@ We will also set the constraints:
 
 A Client can book multiple Appointments, and a Treatment can have multiple Appointments, but each Appointment is linked to a single Client and a single Treatment.
 
+==== Mockdata
 Finally we can provide a certain amount of mock data to start our app. Add a new sql script /appointment-booking-app/src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql adding sample data:
 
 [%nowrap,sql]
@@ -251,3 +252,202 @@ INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALI
 You can provide your own data or use the script above.
 
 Run application and check that the data you provided is inserted into the database.
+
+=== Entities
+==== Lombok Setup 
+If you don't have the lombok dependency yet, add it to the pom.xml:
+[source, xml]
+----
+<dependency>
+	<groupId>org.projectlombok</groupId>
+	<artifactId>lombok</artifactId>
+	<optional>true</optional>
+</dependency>
+----
+
+You might have to install lombok separately in your IDE for the lombok annotations to work.
+
+==== Creating the package structure
+
+TODO WITH SCREENSHOTS, after code review
+
+==== UserEntity
+
+Create a new class _UserEntity_.
+
+Mark the class with `@Entity` and `@Table` annotations, specifying the table name.  
+Additionally, mark the class with @Getters and @Setters annotations from lombok - this will allow a getter and setter generation "in the background", without adding them in the class.
+
+Define private attributes based on the schema (_id, version, email, passwordHash, firstname, lastname_).  
+Mark the _id_ attribute with `@Id` and `@GeneratedValue(strategy = GenerationType.IDENTITY)`, which defines the generation strategy.  
+Mark the _version_ attribute with `@Version` to handle optimistic locking automatically.  
+
+To ensure correct mapping to the database, add the `@Column` annotation with a specified name where needed (where the name in the database is not 1:1 with the name in java).
+
+[source,java]
+----
+@Entity
+@Table(name = "USER_TABLE")
+@Getter
+@Setter
+public class UserEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Version
+    private Integer version;
+
+    @Column(name = "PASSWORD_HASH")
+    private String passwordHash;
+    
+(...)
+}
+
+----
+
+==== ClientEntity
+
+Next to the UserEntity create ClientEntity. Mark the class with proper annotations. Prepare attributes as shown in the schema. For Id and Version use the same annotations, as in UserEntity.
+ 
+Now, lets implement the **uni-directional @OneToOne relationship** between the person and the task list. 
+ClientEntity will be the owner of the relationship. Add a private attribute of type UserEntity in ClientEntity. Mark it with @OneToOne annotation. 
+Additionally, you can add a @JoinColumn annotation, which will precisely describe what is the name of the Foreign Key column in the database in the CLIENT table, and which column it references in USER_TABLE table.
+
+[source,java]
+----
+    @OneToOne
+    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
+    private UserEntity user;
+----
+
+We will add the **bi-directional @ManyToOne relationship** to AppointmentEntity later on.
+
+==== SpecialistEntity
+
+Next to the previous entities create _SpecialistEntity_. Mark the class with proper annotations.  
+Prepare attributes as shown in the schema. For _id_ and _version_, use the same annotations as in _UserEntity_.
+
+For specialization attribute, *create an Enum* _Specialization_ in common/datatype package:
+
+[source,java]
+----
+public enum Specialization {
+	
+	DENTIST("Dentist"), 
+	CARDIOLOGIST("Cardiologist"), 
+	PEDIATRICIAN("Pediatrician"), 
+	UROLOGIST("Urologist"), 
+	NEUROLOGIST("Neurologist"), 
+	ORTHOPAEDIST("Orthopaedist");
+	
+	private String name;
+
+	private Specialization(String name) {
+		this.name = name;
+	}
+
+	public String getName() {
+		return this.name;
+	}
+	
+	public static Specialization getByName(String name) {
+
+		for (Specialization s : Specialization.values()) {
+			if (s.getName().equals(name)) {
+				return s;
+			}
+		}
+		return null;
+	}
+	
+}
+----
+
+The _getByName_ method will be needed for our converter. 
+
+But before that, let’s implement the **uni-directional @OneToOne relationship** between _SpecialistEntity_ and _UserEntity_.  
+_SpecialistEntity_ will be the owner of the relationship.  
+Add a private attribute of type _UserEntity_ in _SpecialistEntity_. Mark it with `@OneToOne` annotation.  
+Additionally, you can use `@JoinColumn` to specify the foreign key column in the _SPECIALIST_ table and its reference in _USER_TABLE_.
+
+To ensure correct mapping to the database, add the `@Column` annotation with a specified name where needed.
+
+We will add the **bi-directional @OneToMany relationship** to _TreatmentEntity_ later on.
+
+===== Converting the specialization attribute
+
+TODO with endresult for specialization attribute with convert annotation
+
+==== TreatmentEntity
+
+Next to other entities create _TreatmentEntity_. Mark the class with proper annotations.  
+Prepare attributes as shown in the schema. Use the same annotations for _id_ and _version_ as in _UserEntity_.
+
+Now, let’s implement the **bi-directional @ManyToOne relationship** between _TreatmentEntity_ and _SpecialistEntity_.  
+_TreatmentEntity_ will be the owning side and will hold information about the specialist providing the treatment.  
+Add a private attribute of type _SpecialistEntity_ in _TreatmentEntity_. Mark it with `@ManyToOne`.  
+Additionally, you can use `@JoinColumn` to specify the foreign key column (but it's not necessary).
+
+[source,java]
+----
+    @ManyToOne
+    @JoinColumn(name = "SPECIALIST_ID", referencedColumnName = "ID")
+    private SpecialistEntity specialist;
+}
+----
+
+Even though _TreatmentEntity_ is the owner, we also want _SpecialistEntity_ to hold information about the treatments provided by a specialist.  
+
+Edit _SpecialistEntity_ and add an additional private attribute of type `List<TreatmentEntity>`.  
+Mark the attribute with `@OneToMany`, defining which attribute this relationship is mapped by, and the cascade types.
+
+[source,java]
+----
+@OneToMany(mappedBy = "specialist", cascade = { CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE })
+private List<TreatmentEntity> treatments;
+----
+
+==== AppointmentEntity
+
+Next to the previous entities create _AppointmentEntity_. Mark the class with proper annotations.  
+Prepare attributes as shown in the schema. Use the same annotations for _id_ and _version_ as in _UserEntity_.
+
+For _status_ attribute, create a simple enum AppointmentStatus next to the _Specialization_ enum:
+
+[source,java]
+----
+public enum AppointmentStatus {
+SCHEDULED, CANCELLED, COMPLETED;
+}
+----
+
+Don't forget the @Enumerated annotation here, with EnumType.STRING.
+
+Now, let’s implement **bi-directional @ManyToOne relationship** between _AppointmentEntity_ and _ClientEntity_.  
+_AppointmentEntity_ is the owning side and will store a reference to the client booking the appointment.
+
+Add a private attribute of type _ClientEntity_ in _AppointmentEntity_.  
+Mark it with `@ManyToOne` annotation and specify the foreign key column with `@JoinColumn`.
+
+Even though _AppointmentEntity_ is the owner, we also want _ClientEntity_ to hold a reference to the appointments booked by a client.  
+
+Edit _ClientEntity_ and add a private attribute of type `List<AppointmentEntity>`.  
+Mark it with `@OneToMany`, specifying the mapped attribute, fetch type (`LAZY`), and cascade type.
+
+[source,java]
+----
+@OneToMany(mappedBy = "client", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+private List<AppointmentEntity> appointments;
+----
+
+Additionally, let’s implement the **uni-directional @ManyToOne relationship** between AppointmentEntity and TreatmentEntity.
+AppointmentEntity will store a reference to the treatment that the appointment is associated with, but TreatmentEntity will not store any reference to AppointmentEntity.
+This means we only define the relationship in AppointmentEntity, making it a one-way connection.
+
+Add a private attribute of type TreatmentEntity in AppointmentEntity.
+Mark it with @ManyToOne annotation.
+
+You are ready to go!
+
+TODO Repositories
