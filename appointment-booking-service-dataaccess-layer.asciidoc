@@ -41,24 +41,24 @@ The _TreatmentEntity_ will be defined by name, description and duration of the t
 
 The _AppointmentEntity_ will be defined by dateTime and status (as an enum of type _AppointmentStatus_). It will have a _ClientEntity_ and _TreatmentEntity_, with which it's connected.
 
-- *One-to-One Relationships*
-  - A *User* has a *one-to-one* relationship with *Client*.
-  - A *User* has a *one-to-one* relationship with *Specialist*.
-    - Each user can either be a *Client* or a *Specialist*, but not both.
+* *One-to-One Relationships*
+** A *User* has a *one-to-one* relationship with *Client*.
+** A *User* has a *one-to-one* relationship with *Specialist*. +
+Each user can either be a *Client* or a *Specialist*, but not both.
 
-- *One-to-Many Relationships*
-  - A *Specialist* has a *one-to-many* relationship with *Treatment*.
-    - A specialist can provide multiple treatments, but each treatment is provided by only one specialist.
-  - A *Client* has a *one-to-many* relationship with *Appointment*.
-    - A client can book multiple appointments, but each appointment belongs to only one client.
-  - A *Treatment* has a *one-to-many* relationship with *Appointment*.
-    - A treatment can be booked in multiple appointments, but each appointment refers to only one treatment.
+* *One-to-Many Relationships*
+** A *Specialist* has a *one-to-many* relationship with *Treatment*. +
+A specialist can provide multiple treatments, but each treatment is provided by only one specialist.
+** A *Client* has a *one-to-many* relationship with *Appointment*. +
+A client can book multiple appointments, but each appointment belongs to only one client.
+** A *Treatment* has a *one-to-many* relationship with *Appointment*. +
+A treatment can be booked in multiple appointments, but each appointment refers to only one treatment.
 
-- *Many-to-One Relationships*
-  - An *Appointment* has a *many-to-one* relationship with *Client*.
-    - Multiple appointments can belong to the same client.
-  - An *Appointment* has a *many-to-one* relationship with *Treatment*.
-    - Multiple appointments can be scheduled for the same treatment.
+* *Many-to-One Relationships*
+** An *Appointment* has a *many-to-one* relationship with *Client*. +
+Multiple appointments can belong to the same client.
+** An *Appointment* has a *many-to-one* relationship with *Treatment*. +
+Multiple appointments can be scheduled for the same treatment.
     
 Only relationships Client - Appointment, and Specialist - Treatment are bidirectional.
 
@@ -69,7 +69,7 @@ We will be using flyway to migrate our database scheme.
 
 You can check that your schema is valid running AppointmentBookingAppApplication.java which recreates schema after each run. Created schema can be found in the H2 console.
 
-image::images/dataaccess/dataaccess_database_uml.png[width="900", link="images/dataaccess/dataaccess_database_uml.png"]
+image::images/dataaccess/dataaccess_database_uml.png[width="500", link="images/dataaccess/dataaccess_database_uml.png"]
 
 Lets start with the database schema. Create a new sql file _V0001__Create_schema.sql_ in appointment-booking-app/src/main/resources/db/migration/1.0/ folder.
 
@@ -104,4 +104,150 @@ We will also set the constraints:
 - UNIQUE_USER_EMAIL unique constraing for email column.
 
 Notice, how we are using *USER_TABLE* instead of just *USER* as a name. USER is a reserved word, and we can't create a table with that name.
-// TODO
+
+==== _CLIENT_ table
+
+We will now add the CLIENT table in `/appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql`.  
+Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and USER_TABLE.  
+
+[source,sql]
+----
+CREATE TABLE CLIENT (
+ID NUMBER(19,0) NOT NULL AUTO_INCREMENT,
+VERSION INTEGER NOT NULL,
+USER_ID NUMBER(19,0) NOT NULL,
+PRIMARY KEY (ID),
+FOREIGN KEY (USER_ID) REFERENCES USER_TABLE(ID)
+);
+----
+
+- ID: the unique identifier for each client, automatically incremented.
+- VERSION: used internally by JPA to handle optimistic locking.
+- USER_ID: a reference to the associated user in the USER_TABLE.
+
+We will also set the constraints:
+
+- primary key for ID to ensure uniqueness.
+- foreign key constraint linking USER_ID to the USER_TABLE.
+
+Since a User can either be a Client or a Specialist (but not both), this table ensures proper role separation in the system.
+
+==== _SPECIALIST_ table
+
+Now lets add the SPECIALIST table.
+Each Specialist is associated with a User, meaning there is a **one-to-one relationship** between the SPECIALIST and USER_TABLE.  
+Additionally, a Specialist has a specialization field to describe their expertise.
+
+The table should contain following columns:
+
+- ID: the unique identifier for each specialist, automatically incremented.
+- VERSION: used internally by JPA for optimistic locking.
+- SPECIALIZATION: the field of expertise for the specialist (e.g. "Dentist", "Orthopaedist").
+- USER_ID: a reference to the associated user in the USER_TABLE.
+
+We will also set the constraints:
+
+- primary key for ID to ensure uniqueness.
+- foreign key constraint linking USER_ID to the USER_TABLE.
+
+==== _TREATMENT_ table
+
+Now lets add the TREATMENT table.
+Each Treatment is provided by a Specialist, meaning there is a **many-to-one relationship** between the TREATMENT and SPECIALIST.
+
+[source,sql]
+----
+CREATE TABLE TREATMENT (
+(...)
+SPECIALIST_ID NUMBER(19,0),
+(...)
+FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID)
+);
+----
+
+The table should contain following columns:
+
+- ID: the unique identifier for each treatment, automatically incremented.
+- VERSION: used internally by JPA for optimistic locking.
+- NAME: the name of the treatment (e.g., "Relaxing Massage").
+- DESCRIPTION: a detailed description of the treatment.
+- DURATION_MINUTES: the estimated duration of the treatment in minutes.
+- SPECIALIST_ID: a reference to the Specialist providing the treatment.
+
+We will also set the constraints:
+
+- primary key for ID to ensure uniqueness.
+- foreign key constraint linking SPECIALIST_ID to the SPECIALIST table.
+
+==== _APPOINTMENT_ table
+
+Finishing off, lets add the APPOINTMENT table.
+Each Appointment is booked by a Client and is associated with a specific Treatment.  
+This means there are **many-to-one relationships** between APPOINTMENT and both CLIENT and TREATMENT, which means two foreign keys for the APPOINTMENT table.
+
+The table should contain following columns:
+
+* ID: the unique identifier for each appointment, automatically incremented.
+* VERSION: used internally by JPA for optimistic locking.
+* DATE_TIME: the scheduled date and time for the appointment.
+* STATUS: the current status of the appointment (default value: `SCHEDULED`), which can be:
+** `SCHEDULED`: Appointment is booked but not yet completed.
+** `CANCELLED`: Appointment has been canceled.
+** `COMPLETED`: Appointment has been completed successfully. 
+* CLIENT_ID: a reference to the Client who booked the appointment.
+* TREATMENT_ID: a reference to the Treatment associated with the appointment.
+
+We will also set the constraints:
+
+- primary key for ID to ensure uniqueness.
+- foreign key constraint linking CLIENT_ID to the CLIENT table.
+- foreign key constraint linking TREATMENT_ID to the TREATMENT table.
+
+A Client can book multiple Appointments, and a Treatment can have multiple Appointments, but each Appointment is linked to a single Client and a single Treatment.
+
+Finally we can provide a certain amount of mock data to start our app. Add a new sql script /appointment-booking-app/src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql adding sample data:
+
+[%nowrap,sql]
+----
+-- USERS - Clients
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-1, 0, 'Stefan', 'Kowalski', 'passwordHash1', 'stefan.kowalski@gmail.com');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-2, 0, 'Anna', 'Nowak', 'passwordHash2', 'annan@yahoo.com');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-3, 0, 'Luiza', 'Poniatowska', 'passwordHash3', 'poniatowskaluiza@o2.pl');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-4, 0, 'Grzegorz', 'Maniewicz', 'passwordHash4', 'g.maniewicz@gmail.com');
+
+-- USERS - Specialists
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-5, 0, 'Dobromir', 'Zegula', 'passwordHash5', 'zegula.d@gmail.com');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-6, 0, 'Monika', 'Siewiczowa', 'passwordHash6', 'monika.s@yahoo.com');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-7, 0, 'Andrzej', 'Piaseczny', 'passwordHash7', 'a.j.piaseczny@o2.pl');
+INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL) VALUES (-8, 0, 'Patrycja', 'Milewska', 'passwordHash8', 'milewskap@gmail.com');
+
+-- CLIENTS
+INSERT INTO CLIENT(ID, VERSION, USER_ID) VALUES (-1, 0, -1);
+INSERT INTO CLIENT(ID, VERSION, USER_ID) VALUES (-2, 0, -2);
+INSERT INTO CLIENT(ID, VERSION, USER_ID) VALUES (-3, 0, -3);
+INSERT INTO CLIENT(ID, VERSION, USER_ID) VALUES (-4, 0, -4);
+
+-- SPECIALISTS
+INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION) VALUES (-1, 0, -5, 'Dentist');
+INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION) VALUES (-2, 0, -6, 'Cardiologist');
+INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION) VALUES (-3, 0, -7, 'Pediatrician');
+INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION) VALUES (-4, 0, -8, 'Orthopaedist');
+
+-- TREATMENTS
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-1, 0, 'Konsultacja dentystyczna', 'Konsultacja dentystyczna z diagnostyką i planem leczenia', 30, -1);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-2, 0, 'Leczenie kanałowe', 'Leczenie kanałowe pojedynczego zęba ze znieczuleniem', 120, -1);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-3, 0, 'Konsultacja kardiologiczna', 'Konsultacja kardiologiczna z wstępną diagnostyką', 30, -2);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-4, 0, 'USG serca', 'USG serca z diagnostyką', 45, -2);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-5, 0, 'Konsultacja pediatryczna', 'Konsultacja pediatryczna w przypadku choroby', 20, -3);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-6, 0, 'Bilans 2-latka', 'Bilans dwulatka z przygotowaniem dokumentacji', 40, -3);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-7, 0, 'Wymaz z nosogardła', 'Wymaz pobierany z części nosowej gardła w celu diagnostycznym', 10, -3);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-8, 0, 'Bilans 5-latka', 'Bilans pięciolatka z przygotowaniem dokumentacji', 40, -3);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-9, 0, 'Płukanie żołądka', 'Interwencyjne płukanie żołądka', 30, -3);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-10, 0, 'Konsultacja ortopedyczna', 'Konsultacja ortopedyczna z diagnostyką', 30, -4);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-11, 0, 'Usunięcie haluksów', 'Operacja usunięcia haluksów z korekcję torebki stawowej i ścięgien', 75, -4);
+INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID) VALUES (-12, 0, 'Rekonstrukcja więzadła ACL', 'Rekonstrukcją więzadła krzyżowego przedniego (ACL) z zastąpieniem uszkodzonego więzadła nowym więzadłem ze ścięgien pacjenta.', 180, -4);
+----
+
+You can provide your own data or use the script above.
+
+Run application and check that the data you provided is inserted into the database.
