@@ -330,7 +330,7 @@ We will add the **bi-directional @ManyToOne relationship** to AppointmentEntity 
 Next to the previous entities create _SpecialistEntity_. Mark the class with proper annotations.  
 Prepare attributes as shown in the schema. For _id_ and _version_, use the same annotations as in _UserEntity_.
 
-For specialization attribute, *create an Enum* _Specialization_ in common/datatype package:
+For specialization attribute, *create an Enum* _Specialization_ in _/common/datatype_ package:
 
 [source,java]
 ----
@@ -379,7 +379,60 @@ We will add the **bi-directional @OneToMany relationship** to _TreatmentEntity_ 
 
 ===== Converting the specialization attribute
 
-TODO with endresult for specialization attribute with convert annotation
+Now, let’s implement an **Attribute Converter** for the `Specialization` enum.  
+
+In JPA, an `@Converter` allows us to customize how an enum is stored in the database.  
+By default, JPA can store enums as **ordinal values** (integers) or **names** (string representations of enum constants).  
+However, in our case, we want to store the **custom name field** of the `Specialization` enum instead of its default `name()`.  
+
+To achieve this, we will:  
+- Create a new class `SpecializationConverter` in package _/common/converter_ 
+- Implement `AttributeConverter<Specialization, String>`  
+- Override the `convertToDatabaseColumn(Specialization specialization)` method to return `specialization.getName()`  
+- Override the `convertToEntityAttribute(String dbData)` method to use `Specialization.getByName(dbData)`  
+- Mark the class with `@Converter`
+
+====== a. Implementation
+
+[source,java]
+----
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+
+@Converter
+public class SpecializationConverter implements AttributeConverter<Specialization, String> {
+
+    @Override
+	public String convertToDatabaseColumn(Specialization specialization) {
+		
+		return specialization != null ? specialization.getName() : null;
+		
+	}
+
+    @Override
+    public Specialization convertToEntityAttribute(String dbData) {
+        if (dbData == null) {
+            return null;
+        }
+        return Specialization.getByName(dbData);
+    }
+}
+----
+
+====== b. Usage in SpecialistEntity
+
+To ensure the conversion is applied, annotate the `specialization` field in _SpecialistEntity_ with `@Convert(converter = SpecializationConverter.class)`.  
+
+[source,java]
+----
+@Convert(converter = SpecializationConverter.class)
+private Specialization specialization;
+----
+
+We could also mark the Converter as `@Converter(autoApply = true)`, so that JPA automatically applies it to all entity fields of type `Specialization`.
+If we do so, we **don’t need to explicitly annotate each occurrence of Specialization**, as JPA will apply the converter automatically.  
+
+Important to note - annotation @Enumerated and @Convert can not coexist! You have to either use one or another.
 
 ==== TreatmentEntity
 
