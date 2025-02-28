@@ -1,0 +1,67 @@
+@startuml
+
+class UserEntity {
+    +Long id
+    +int version
+    +String email
+    +String passwordHash
+    +String firstname
+    +String lastname
+}
+
+class ClientEntity {
+    +Long id
+    +int version
+    +UserEntity user
+    +List<AppointmentEntity> appointments
+}
+
+class SpecialistEntity {
+    +Long id
+    +int version
+    +UserEntity user
+    +Specialization specialization
+    +List<TreatmentEntity> treatments
+}
+
+class TreatmentEntity {
+    +Long id
+    +int version
+    +String name
+    +String description
+    +int durationMinutes
+    +SpecialistEntity specialist
+}
+
+class AppointmentEntity {
+    +Long id
+    +int version
+    +ClientEntity client
+    +TreatmentEntity treatment
+    +Date dateTime
+    +AppointmentStatus status
+}
+
+enum AppointmentStatus {
+    SCHEDULED
+    CANCELLED
+    COMPLETED
+}
+
+enum Specialization {
+    DENTIST("Dentist") 
+	CARDIOLOGIST("Cardiologist") 
+	PEDIATRICIAN("Pediatrician") 
+	UROLOGIST("Urologist")
+	NEUROLOGIST("Neurologist") 
+	ORTHOPAEDIST("Orthopaedist")
+}
+
+Client "1" -- "1" User 
+Client "1" -- "n" Appointment 
+Specialist "1" -- "n" Treatment 
+Treatment "1" -- "n" Appointment 
+Appointment "n" -- "1" Client
+Appointment "n" -- "1" Treatment
+
+@enduml

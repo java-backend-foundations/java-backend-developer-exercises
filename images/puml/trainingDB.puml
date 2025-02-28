@@ -1,0 +1,49 @@
+@startuml
+
+entity USER_TABLE {
+    + ID : NUMBER(19,0) <<PK>>
+    + VERSION : INTEGER
+    + EMAIL : VARCHAR(128) <<UNIQUE UNIQUE_USER_EMAIL>>
+    + PASSWORD_HASH : VARCHAR(128)
+    + FIRST_NAME : VARCHAR(128)
+    + LAST_NAME : VARCHAR(128)
+}
+
+entity CLIENT {
+    + ID : NUMBER(19,0) <<PK>>
+    + VERSION : INTEGER
+    + USER_ID : NUMBER(19,0) <<FK>>
+}
+
+entity SPECIALIST {
+    + ID : NUMBER(19,0) <<PK>>
+    + VERSION : INTEGER
+    + SPECIALIZATION : VARCHAR(128)
+    + USER_ID : NUMBER(19,0) <<FK>>
+}
+
+entity TREATMENT {
+    + ID : NUMBER(19,0) <<PK>>
+    + VERSION : INTEGER
+    + NAME : VARCHAR(256)
+    + DESCRIPTION : VARCHAR(1024)
+    + DURATION_MINUTES : INTEGER
+    + SPECIALIST_ID : NUMBER(19,0) <<FK>>
+}
+
+entity APPOINTMENT {
+    + ID : NUMBER(19,0) <<PK>>
+    + VERSION : INTEGER
+    + DATE_TIME : TIMESTAMP
+    + STATUS : VARCHAR(128) = 'SCHEDULED'
+    + CLIENT_ID : NUMBER(19,0) <<FK>>
+    + TREATMENT_ID : NUMBER(19,0) <<FK>>
+}
+
+USER_TABLE ||--|{ CLIENT : "has"
+USER_TABLE ||--|{ SPECIALIST : "has"
+SPECIALIST ||--|{ TREATMENT : "provides"
+CLIENT ||--|{ APPOINTMENT : "books"
+TREATMENT ||--|{ APPOINTMENT : "involves"
+
+@enduml
