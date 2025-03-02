@@ -1,0 +1,83 @@
+:toc: macro
+
+= Preparation for the training
+
+toc::[]
+
+== Setup the development environment
+
+Before we dive into the Spring Boot training, please ensure your development environment is ready by downloading and setting up the following software on your Windows machine.
+
+[NOTE]
+====
+If you want to avoid problems during the training, please DO NOT use paths containing spaces like `C:\Program Files`
+====
+
+=== Software List
+
+- *Git for Windows*: link:https://git-scm.com/download/win[Download]
+- *Apache Maven*: link:https://maven.apache.org/download.cgi[Download]
+- *JDK 21*:
+** Oracle JDK: link:https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html[Download]
+** OpenJDK (Adoptium): link:https://adoptium.net/[Download]
+- *IDE (Choose One)*:
+** IntelliJ IDEA (recommended): link:https://www.jetbrains.com/idea/download/#section=windows[Download]
+** Eclipse: link:https://www.eclipse.org/downloads/[Download]
+** Visual Studio Code (VSCode): link:https://code.visualstudio.com/Download[Download]
+- *API client (Choose One) to test REST calls*:
+** Postman: link:https://www.postman.com/downloads/[Download]
+** Insomnia: link:https://insomnia.rest/download[Download]
+** or use HTTP client in IntelliJ (Ultimate only)
+
+=== Setup Instructions
+
+. Download and install *Git for Windows* from the provided link.
+. Download *Apache Maven* and extract it to a convenient location on your system (e.g. `C:\Programs`). Add the location to the `PATH` environment variable.
+. Choose and download *JDK 21* from either the Oracle JDK or OpenJDK options and install it.
+. Select and download an *IDE* of your choice (IntelliJ IDEA, Eclipse, or VSCode) for developing Spring Boot applications.
+. Download and install *Postman* for testing your Spring Boot application's RESTful services.
+. Create a *Github* account (if you don't have any yet).
+
+Please follow the installation instructions on the download pages for each piece of software.
+
+=== Test the environment
+
+- Please open terminal and test the environment. The outputs below may differ from the outputs on your environment.
+- Please test the installed JDK version
++
+--
+[source,bash]
+--------
+javac -version
+--------
+--
+You should see in the output the same version you have installed, like this
++
+--
+[source,bash]
+--------
+javac 21.0.2
+--------
+--
+If you don't see the proper version, check whether your JDK installation is added to the `PATH` environment variable or whether you have set the `JAVA_HOME` variable properly.
+- Please test the Maven installation
++
+--
+[source,bash]
+--------
+mvn -v
+--------
+--
+You should see the output like this
++
+--
+[source,bash]
+--------
+Apache Maven 3.9.5 (57804ffe001d7215b5e7bcb531cf83df38f93546)
+Maven home: /home/ksobkowiak/.m2/wrapper/dists/apache-maven-3.9.5-bin/32db9c34/apache-maven-3.9.5
+Java version: 21.0.2, vendor: Eclipse Adoptium, runtime: /home/ksobkowiak/.sdkman/candidates/java/21.0.2-tem
+Default locale: en, platform encoding: UTF-8
+OS name: "linux", version: "5.15.133.1-microsoft-standard-wsl2", arch: "amd64", family: "unix"
+--------
+--
+You should see the Maven version `3.8+`. Maven output should print the usage of the proper JDK version.
