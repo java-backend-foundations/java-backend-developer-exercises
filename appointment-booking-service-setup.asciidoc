@@ -127,6 +127,8 @@ image::images/setup/h2-console-content.png[H2 Console - content]
 
 You're now ready to start developing your Spring Boot application!
 
-== link:appointment-booking-system-specification.asciidoc[Next chapter: Introduction: Appointment Booking System Specification]
-
-=== link:preparation.asciidoc[Previous chapter: Preparation]
+== Navigation
+[grid=cols]
+|===
+| <= link:preparation.asciidoc[Previous Chapter: Preparation] | link:appointment-booking-system-specification.asciidoc[Next Chapter: Introduction: Appointment Booking System Specification] =>
+|===
