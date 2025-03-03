@@ -2,7 +2,7 @@
 :sectnums:
 :sectnumlevels: 3
 
-= Appointment Booking Service - Data Access Layer
+= Appointment Booking System - Data Access Layer
 
 In this chapter we are going to create a database schema with initial data.
 Then we will map it into entities model and provide operations for management of the entities.
@@ -11,9 +11,9 @@ toc::[]
 
 == Create your component
 
-After you have completed your own link:appointment-booking-service-setup.asciidoc[Appointment Booking Service Setup], we are going to create our first app component.
+After you have completed your own link:appointment-booking-service-setup.asciidoc[Appointment Booking System Setup], we are going to create our first app component.
 
-Going back to our example application, link:appointment-booking-system-specification.asciidoc[Appointment Booking Service], we need to provide basic functionalities:
+Going back to our example application, link:appointment-booking-system-specification.asciidoc[Appointment Booking System], we need to provide basic functionalities:
 
 - Adding a new `Treatment` associated with a `Specialist`
 - Retrieving a list of available `Treatments`, optionaly filtered by `Specialist` or `Treatment` name

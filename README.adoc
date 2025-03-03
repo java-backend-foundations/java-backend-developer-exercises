@@ -16,8 +16,8 @@ Before beginning the labs, please complete the link:preparation.asciidoc[Prepara
 
 The training is structured to help you build the _Appointment Booking Service_ in layers, progressing from setup to business logic, service integration, and security. Follow the modules below in sequence:
 
-. link:appointment-booking-service-setup.asciidoc[Setup]: Set up the foundational elements needed to start working on the Appointment Booking Service application.
-. link:appointment-booking-system-specification.asciidoc[Introduction: Appointment Booking System Specification]: Understand the purpose of the Appointment Booking Service and the key features it will provide.
+. link:appointment-booking-service-setup.asciidoc[Setup]: Set up the foundational elements needed to start working on the Appointment Booking System application.
+. link:appointment-booking-system-specification.asciidoc[Introduction: Appointment Booking System Specification]: Understand the purpose of the Appointment Booking System and the key features it will provide.
 . link:appointment-booking-service-dataaccess-layer.asciidoc[Data Access Layer]: Define the database schema and create the entities for the data access layer.
 . link:appointment-booking-service-logic-layer.asciidoc[Business Logic Layer]: Implement the core business logic for managing appointments and related operations.
 . link:appointment-booking-service-services-layer.asciidoc[Services Layer]: Integrate services and configure interaction points within the application.

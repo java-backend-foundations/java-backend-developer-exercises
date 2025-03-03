@@ -1,4 +1,6 @@
 :toc: macro
+:sectnums:
+:sectnumlevels: 2
 
 = Preparation for the training
 
@@ -81,3 +83,5 @@ OS name: "linux", version: "5.15.133.1-microsoft-standard-wsl2", arch: "amd64", 
 --------
 --
 You should see the Maven version `3.8+`. Maven output should print the usage of the proper JDK version.
+
+== link:appointment-booking-service-setup.asciidoc[Next chapter: Setup the Spring Boot project]

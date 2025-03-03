@@ -1,6 +1,8 @@
 :toc: macro
+:sectnums:
+:sectnumlevels: 2
 
-= Setup the project
+= Setup the Spring Boot project
 
 toc::[]
 
@@ -125,4 +127,6 @@ image::images/setup/h2-console-content.png[H2 Console - content]
 
 You're now ready to start developing your Spring Boot application!
 
-=== link:task-service.asciidoc[Next chapter: Task Service]
+== link:appointment-booking-system-specification.asciidoc[Next chapter: Introduction: Appointment Booking System Specification]
+
+=== link:preparation.asciidoc[Previous chapter: Preparation]
