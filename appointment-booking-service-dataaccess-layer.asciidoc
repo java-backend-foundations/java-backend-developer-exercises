@@ -505,4 +505,12 @@ Mark it with @ManyToOne annotation.
 
 You are ready to go!
 
+=== Repositories
+
 TODO Repositories
+
+== Navigation
+[grid=cols]
+|===
+| <= link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
+|===

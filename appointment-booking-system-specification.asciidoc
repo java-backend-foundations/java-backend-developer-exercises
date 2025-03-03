@@ -130,6 +130,8 @@ The **Appointment Booking System** is a web-based application designed to facili
 == Sequence Diagram
 For a visual representation of the use cases, see the link:images/puml/appointment_booking_diagram.puml[sequence diagram].
 
-== link:appointment-booking-service-dataaccess-layer.asciidoc[Next Chapter: Appointment Booking System - Data Access Layer]
-
-=== link:appointment-booking-service-setup.asciidoc[Previous Chapter: Setup the Spring Boot project]
+== Navigation
+[grid=cols]
+|===
+| <= link:appointment-booking-service-setup.asciidoc[Previous Chapter: Setup the Spring Boot project] | link:appointment-booking-service-dataaccess-layer.asciidoc[Next Chapter: Appointment Booking System - Data Access Layer] =>
+|===
