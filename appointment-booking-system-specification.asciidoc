@@ -1,0 +1,134 @@
+:toc: macro
+:sectnums:
+:sectnumlevels: 2
+
+= Introduction: Appointment Booking System Specification
+
+During this workshop, we will implement a multi-layered server application for the Appointment Booking System.
+
+Our development process will begin with defining the **data model** and implementing the **data access layer**. This will establish a solid foundation for handling appointments, treatments, and user roles within the system.
+
+By following a structured approach, we will incrementally build the core functionalities, ensuring maintainability and scalability.
+
+toc::[]
+
+== Overview
+The **Appointment Booking System** is a web-based application designed to facilitate scheduling appointments between clients and specialists. The system ensures efficient booking management, availability validation, and appointment status tracking.
+
+== Use Cases
+
+=== Retrieve List of Available Treatments
+*Actor:* Client
+*Description:* A client can retrieve a list of available treatments, optionally filtering by specialist or treatment name.
+
+*Flow:*
+
+1. The client requests a list of treatments.
+2. The system retrieves available treatments from the database.
+3. The client receives the list of treatments, optionally filtered.
+
+=== Retrieve Treatment Details
+*Actor:* Client
+*Description:* A client can view the details of a specific treatment, including information about the assigned specialist.
+
+*Flow:*
+
+1. The client selects a treatment.
+2. The system retrieves detailed information about the treatment, including the specialist assigned to it.
+3. The client receives the treatment details.
+
+=== Specialist Creates a New Treatment
+*Actor:* Specialist
+*Description:* A specialist can create a new treatment, defining its name and duration.
+
+*Flow:*
+
+1. The specialist submits a request to create a treatment.
+2. The system stores the treatment in the database.
+3. The specialist receives a confirmation that the treatment was created.
+
+=== Client Books an Appointment
+*Actor:* Client
+*Description:* A client selects a treatment and schedules an appointment.
+
+*Flow:*
+
+1. The client chooses a treatment and provides a date and time.
+2. The system checks if the specialist is available.
+3. If available, the system saves the appointment and confirms the booking.
+4. If not available, the client receives an error message.
+
+=== Validate Scheduling Conflicts
+*Actor:* Client
+*Description:* The system ensures no two appointments overlap for a specialist.
+
+*Flow:*
+
+1. The client requests an appointment.
+2. The system checks for existing appointments at the same time.
+3. If a conflict exists, the client is notified.
+4. If no conflict exists, the appointment proceeds to booking.
+
+=== Client Checks Their Appointments
+*Actor:* Client
+*Description:* A client can retrieve a list of their scheduled appointments.
+
+*Flow:*
+
+1. The client requests a list of their appointments.
+2. The system retrieves and returns the appointments.
+
+=== Client Cancels an Appointment
+*Actor:* Client
+*Description:* A client can cancel a previously scheduled appointment.
+
+*Flow:*
+
+1. The client selects an appointment to cancel.
+2. The system updates the appointment status to "CANCELLED."
+3. The client receives confirmation.
+
+=== Specialist Marks an Appointment as Completed
+*Actor:* Specialist
+*Description:* A specialist can mark an appointment as completed after the service has been provided.
+
+*Flow:*
+
+1. The specialist selects an appointment to mark as completed.
+2. The system updates the appointment status to "COMPLETED."
+3. The specialist receives confirmation.
+
+=== Client Retrieves Appointment History
+*Actor:* Client
+*Description:* A client can view past appointments (both completed and cancelled).
+
+*Flow:*
+
+1. The client requests a list of past appointments.
+2. The system retrieves and displays the history.
+
+=== Specialist Retrieves Their Appointment History
+*Actor:* Specialist
+*Description:* A specialist can view a list of their past appointments.
+
+*Flow:*
+
+1. The specialist requests a list of past appointments.
+2. The system retrieves and displays the history.
+
+=== Checking Appointment Availability
+*Actor:* Client
+*Description:* The system checks if a specialist is available for a given time slot.
+
+*Flow:*
+
+1. The client requests availability for a specific specialist and time.
+2. The system checks for existing appointments at the given time.
+3. If no conflicting appointments exist, the system returns "Available."
+4. If a conflict exists, the system returns "Not Available."
+
+== Sequence Diagram
+For a visual representation of the use cases, see the link:images/puml/appointment_booking_diagram.puml[sequence diagram].
+
+== link:appointment-booking-service-dataaccess-layer.asciidoc[Next Chapter: Task Service - Data Access Layer]
+
