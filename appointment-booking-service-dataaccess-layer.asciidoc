@@ -221,6 +221,22 @@ We will also set the constraints:
 
 A Client can book multiple Appointments, and a Treatment can have multiple Appointments, but each Appointment is linked to a single Client and a single Treatment.
 
+==== SEQUENCES
+
+To provide a generation strategy for our technical IDs, lets provide some sequences for our tables and entities.
+First create a sequence for a user:
+
+[source, sql]
+----
+CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
+----
+
+The sequence will start with 1, and each call for next_val will return the value from previus next_val call, with 100 added to it (first 101, then 201, 301 and so on). 
+Nocycle means, the sequence will not start all over again when it reaches the max value.
+
+Now create the sequences for all your entities basing off of the sequence for user.
+
+
 ==== Mockdata
 Finally we can provide a certain amount of mock data to start our app. Add a new sql script /appointment-booking-app/src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql adding sample data:
 
@@ -526,18 +542,17 @@ Important to note - annotation @Enumerated and @Convert can not coexist! You hav
 
 ==== TreatmentEntity
 
-Next to other entities create _TreatmentEntity_. Mark the class with proper annotations.  
-Prepare attributes as shown in the schema. Use the same annotations for _id_ and _version_ as in _UserEntity_.
+Next to other entities create _TreatmentEntity_. Mark the class with proper annotations, extend the _BaseEntity_.  
+Prepare attributes as shown in the schema. Use the same annotations for _id_ as in _UserEntity_, use proper sequence.
 
 Now, let’s implement the **bi-directional @ManyToOne relationship** between _TreatmentEntity_ and _SpecialistEntity_.  
 _TreatmentEntity_ will be the owning side and will hold information about the specialist providing the treatment.  
-Add a private attribute of type _SpecialistEntity_ in _TreatmentEntity_. Mark it with `@ManyToOne`.  
+Add a private attribute of type _SpecialistEntity_ in _TreatmentEntity_. Mark it with `@ManyToOne` and define the fetch type as lazy.  
 Additionally, you can use `@JoinColumn` to specify the foreign key column (but it's not necessary).
 
 [source,java]
 ----
-    @ManyToOne
-    @JoinColumn(name = "SPECIALIST_ID", referencedColumnName = "ID")
+    @ManyToOne(fetch = FetchType.LAZY)
     private SpecialistEntity specialist;
 }
 ----
@@ -545,18 +560,20 @@ Additionally, you can use `@JoinColumn` to specify the foreign key column (but i
 Even though _TreatmentEntity_ is the owner, we also want _SpecialistEntity_ to hold information about the treatments provided by a specialist.  
 
 Edit _SpecialistEntity_ and add an additional private attribute of type `List<TreatmentEntity>`.  
-Mark the attribute with `@OneToMany`, defining which attribute this relationship is mapped by, and the cascade types.
+Mark the attribute with `@OneToMany`, defining which attribute this relationship is mapped by, and the cascade types - only _Persist_ and _Remove_ (we don't want the Treatment to exist without a relationship to a Specialist).
+Add orphanRemoval=true, so that the Appointment will be removed, then the connection between Client and Appointment is broken.
+You can add a fetchType `LAZY` as well, it's a default type in this case though.
 
 [source,java]
 ----
-@OneToMany(mappedBy = "specialist", cascade = { CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE })
+@OneToMany(mappedBy = "specialist", fetch = FetchType.LAZY, orphanRemoval = true, cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
 private List<TreatmentEntity> treatments;
 ----
 
 ==== AppointmentEntity
 
-Next to the previous entities create _AppointmentEntity_. Mark the class with proper annotations.  
-Prepare attributes as shown in the schema. Use the same annotations for _id_ and _version_ as in _UserEntity_.
+Next to the previous entities create _AppointmentEntity_. Mark the class with proper annotations, extend the _BaseEntity_ class.
+Prepare attributes as shown in the schema. Use the same annotations for _id_ as in _UserEntity_. Remember about the sequence.
 
 For _status_ attribute, create a simple enum AppointmentStatus next to the _Specialization_ enum:
 
@@ -573,16 +590,16 @@ Now, let’s implement **bi-directional @ManyToOne relationship** between _Appoi
 _AppointmentEntity_ is the owning side and will store a reference to the client booking the appointment.
 
 Add a private attribute of type _ClientEntity_ in _AppointmentEntity_.  
-Mark it with `@ManyToOne` annotation and specify the foreign key column with `@JoinColumn`.
+Mark it with `@ManyToOne` annotation, specify the fetch type as lazy.
 
 Even though _AppointmentEntity_ is the owner, we also want _ClientEntity_ to hold a reference to the appointments booked by a client.  
 
 Edit _ClientEntity_ and add a private attribute of type `List<AppointmentEntity>`.  
-Mark it with `@OneToMany`, specifying the mapped attribute and cascade types. Add orphanRemoval=true, so that the Appointment will be removed, then the connection between Client and Appointment is broken.
+Mark it with `@OneToMany`, specifying the mapped attribute, orphanRemoval, fetch type and cascade types. 
 
 [source,java]
 ----
-@OneToMany(mappedBy = "client", cascade = { CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REMOVE }, orphanRemoval=true)
+@OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval=true, cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
 private List<AppointmentEntity> appointments;
 ----
 
@@ -591,7 +608,7 @@ AppointmentEntity will store a reference to the treatment that the appointment i
 This means we only define the relationship in AppointmentEntity, making it a one-way connection.
 
 Add a private attribute of type TreatmentEntity in AppointmentEntity.
-Mark it with @ManyToOne annotation.
+Mark it with @ManyToOne annotation. Define fetch type as lazy.
 
 You are ready to go!
 
