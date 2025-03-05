@@ -323,7 +323,16 @@ You might have to install lombok separately in your IDE for the lombok annotatio
 
 ==== Creating the package structure
 
-TODO WITH SCREENSHOTS, after code review
+Now that we have defined the database for our entities, it's time to start creating the code of the related components.
+
+We are going to create entities in new package _dataaccess_ which will contain all objects specific for our layer.
+
+Create package _dataaccess.entity_ under _com.capgemini.training.appointmentbooking_ where we will place our entities.
+
+image::images/dataaccess/dataaccess_package_creation_1.png[width="700", link="images/dataaccess/dataaccess_package_creation_1.png"]
+image::images/dataaccess/dataaccess_package_creation_2.png[width="500", link="images/dataaccess/dataaccess_package_creation_2.png"]
+
+You can create _dataaccess.converter_ and _common.datatype_ as well, since we will be using these packages in the next steps.
 
 ==== BaseEntity
 
