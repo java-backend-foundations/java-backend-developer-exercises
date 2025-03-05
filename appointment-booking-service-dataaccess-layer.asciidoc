@@ -619,6 +619,42 @@ This means we only define the relationship in AppointmentEntity, making it a one
 Add a private attribute of type TreatmentEntity in AppointmentEntity.
 Mark it with @ManyToOne annotation. Define fetch type as lazy.
 
+==== EntitySmokeTest
+
+Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.  
+Create a new test class named _EntitySmokeTest_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest` to configure JPA-related components.
+
+Inside the class, inject an instance of `EntityManager` using `@PersistenceContext`.
+
+Now, implement a test method that will validate the database contains the expected number of records for each entity.
+
+[source,java]
+----
+    @Test
+    void loadAllClasses() {
+
+        // given
+        Map<Class<? extends BaseEntity>, Integer> classMap = Map.of(
+                UserEntity.class, 8,
+                ClientEntity.class, 4,
+                SpecialistEntity.class, 4,
+                TreatmentEntity.class, 12,
+                AppointmentEntity.class, 20
+        );
+
+        // when //then
+        classMap.forEach((entityType, expectedCount) ->
+                assertThat(em.createQuery("from " + entityType.getSimpleName()).getResultList()).hasSize(expectedCount));
+    }
+}
+----
+
+For each entity type, we define the expected number of records in a map.
+
+Using `EntityManager`, we execute a simple query `"from <EntityName>"` to fetch all records of a given entity type.
+
+We then validate that the number of retrieved records matches the expected count.
+
 You are ready to go!
 
 === Repositories
