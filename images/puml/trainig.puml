@@ -3,6 +3,8 @@
 class UserEntity {
     +Long id
     +int version
+    +Instant created
+    +Instant lastUpdated
     +String email
     +String passwordHash
     +String firstname
@@ -12,6 +14,8 @@ class UserEntity {
 class ClientEntity {
     +Long id
     +int version
+    +Instant created
+    +Instant lastUpdated
     +UserEntity user
     +List<AppointmentEntity> appointments
 }
@@ -19,6 +23,8 @@ class ClientEntity {
 class SpecialistEntity {
     +Long id
     +int version
+    +Instant created
+    +Instant lastUpdated
     +UserEntity user
     +Specialization specialization
     +List<TreatmentEntity> treatments
@@ -27,6 +33,8 @@ class SpecialistEntity {
 class TreatmentEntity {
     +Long id
     +int version
+    +Instant created
+    +Instant lastUpdated
     +String name
     +String description
     +int durationMinutes
@@ -36,9 +44,11 @@ class TreatmentEntity {
 class AppointmentEntity {
     +Long id
     +int version
+    +Instant created
+    +Instant lastUpdated
     +ClientEntity client
     +TreatmentEntity treatment
-    +Date dateTime
+    +LocalDateTime dateTime
     +AppointmentStatus status
 }
 
@@ -59,9 +69,8 @@ enum Specialization {
 
 Client "1" -- "1" User 
 Client "1" -- "n" Appointment 
+Specialist "1" -- "1" User
 Specialist "1" -- "n" Treatment 
 Treatment "1" -- "n" Appointment 
-Appointment "n" -- "1" Client
-Appointment "n" -- "1" Treatment
 
 @enduml
