@@ -721,15 +721,13 @@ public class AppointmentRepositoryTest {
 
     @Test
     void testFindAll() {
-        //given when
+        //given
+        // when
         List<AppointmentEntity> result = appointmentRepository.findAll();
 
         //then
         assertThat(result).isNotEmpty();
         assertThat(result).hasSize(20);
-        // Notice, that the number of objects are equal to entities inserted by mockdata script launched by flyway.
-        // We could also define separate test/resources migration scripts, but we won't do that!
-        // (let's spare the time, you can google it if you want)
     }
 }
 
@@ -754,7 +752,6 @@ Wonderful job! You've created your first Test using Spring Repositories and _@Da
 You may have also heard of _@SpringBootTest_. You can try and switch it up to see the difference.
 _@SpringBootTest_'s are slower, but also allow you to test web communication and they search for
 _@SpringBootConfiguration_ when required, allowing you to overwrite configuration for testing purposes.
-
 
 Regardless JPA Testing, those annotations seem same at first, but it's much easier to connect yourself to an other database,
 be it in local or in remote test environment and check if your database constraints etc. are working,
@@ -809,14 +806,14 @@ Directly in the interface create a new method with a @Query annotation and JQPL 
 
 [source,java]
 ----
-@Query("SELECT a FROM AppointmentEntity a " +
-            "JOIN a.treatment t " +
-            "WHERE t.specialist.id = :specialistId " +
-            "AND a.dateTime < :dateTime " +
-            "ORDER BY a.dateTime DESC")
-List<AppointmentEntity> findPastAppointmentsBySpecialist(
-        @Param("specialistId") Long specialistId,
-        @Param("dateTime") Instant dateTime);
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            JOIN a.treatment t
+            WHERE t.specialist.id = :specialistId
+            AND a.dateTime < :date
+            ORDER BY a.dateTime DESC
+            """)
+    List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(@Param("specialistId") Long specialistId, @Param("date") Instant date);
 
 ----
 
@@ -851,7 +848,16 @@ This breaks SOLID but is definitely quicker if you just want to test something o
 The proper way to use the entityManager without receiving it as a param, is to implement a customRepo and extending your main repo with it,
 thus keeping our SOLID rules in check and having a way to implement methods manually.
 
-In the same package, create a _CustomUserRepository_. It will contain method signatures for your JpaRepository.
+First, we need to define a class with the fields that will be used for searching.
+Create a _UserCriteria_ class in the criteria package to encapsulate search parameters.
+
+[source,java]
+----
+public record UserCriteria(String firstName, String lastName, String email) {
+}
+----
+
+In the repository package, create a _CustomUserRepository_. It will contain method signatures for your JpaRepository.
 
 [source,java]
 ----
@@ -885,7 +891,7 @@ Your _UserRepository_ will now understand that it has those custom methods alrea
 [source,java]
 ----
 public interface UserRepository extends JpaRepository<UserEntity, Long>, CustomUserRepository {
-    //nothing! it just works
+    // no more implementation needed here
 }
 ----
 
@@ -894,37 +900,27 @@ public interface UserRepository extends JpaRepository<UserEntity, Long>, CustomU
 It allows you to build somewhat customized, more complex queries, but the amount of boilerplate code is obnoxious. The boilerplate code will require two different "creator" classes to be instantiated and mixed with each other.
 In the end the dev is forced to either build a horrific chain of subclasses to generalise some of the code, or, typically, copy-paste like the client would pay them for LoC.
 
-Here's a working sample, you can copy-paste in most of projects using Criteria API and you're golden.
+Here's a working sample, you can copy-paste in most of the projects using Criteria API and you're golden.
 
 In the _AppointmentRepository_ interface type:
 [source,java]
 ----
-default List<AppointmentEntity> findByCriteria(AppointmentCriteria c, EntityManager em) {
-        Objects.requireNonNull(c, "SearchCriteria cannot be null");
+default List<AppointmentEntity> findByCriteria(AppointmentCriteria appointmentCriteria, EntityManager entityManager) {
+        Objects.requireNonNull(appointmentCriteria, "appointmentCriteria must not be null");
 
-        CriteriaBuilder builder = em.getCriteriaBuilder();
-        CriteriaQuery<AppointmentEntity> criteriaQuery = builder.createQuery(AppointmentEntity.class);
-        Root<AppointmentEntity> root = criteriaQuery.from(AppointmentEntity.class);
-        List<Predicate> predicateList = new ArrayList<>();
-
-        if (c.treatmentName() != null) {
-            Join<AppointmentEntity, TreatmentEntity> treatmentJoin = root.join("treatment", JoinType.LEFT);
-            predicateList.add(builder.like(treatmentJoin.get("name"), c.treatmentName()));
-        }
-
-        if (c.dateTime() != null) {
-            java.util.Date dateTime = java.util.Date.from(c.dateTime().atZone(ZoneOffset.UTC).toInstant());
-            predicateList.add(builder.equal(root.get("dateTime"), dateTime));
-        }
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<AppointmentEntity> cq = cb.createQuery(AppointmentEntity.class);
+        Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
+        List<Predicate> predicates = new ArrayList<>();
 
         if (c.status() != null) {
             predicateList.add(builder.like(root.get("status"), c.status().name()));
         }
 
-        Predicate[] predicateArray = predicateList.toArray(new Predicate[0]);
-        criteriaQuery.where(predicateArray);
-        TypedQuery<AppointmentEntity> query = em.createQuery(criteriaQuery);
-        return query.getResultList();
+        // another predicates
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        return entityManager.createQuery(cq).getResultList();
     }
 ----
 
@@ -1043,10 +1039,11 @@ public class ClientRepositoryTest {
 
 Implement these queries:
 
-1. Find all appointments within a specified time period and having a designated status - using a Spring Query Method.
+1. Find appointments within a specified time period and having a designated status - using a Spring Query Method.
 2. Find conflicted appointments for given specialistId and date - using @Query.
 3. Find treatment by name - using NamedQuery and bind it to interface method.
-4. Find all specialists by firstName and lastName - using QueryDSL.
+4. Find treatments by name and specialization - using QueryDSL.
+5. Find appointments history for given client/specialist - using criteria API.
 
 Remember to test your queries!
 
