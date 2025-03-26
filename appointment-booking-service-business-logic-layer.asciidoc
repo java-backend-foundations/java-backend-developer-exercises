@@ -12,11 +12,11 @@ toc::[]
 
 == Design of the Logic Layer and implementation of the first CRUD Use Cases
 
-To get familiar with the structure of the Business Logic Layer will start with the implementation of very basic CRUD (**C**reate, **R**ead, **U**pdate, **D**elete) logic. We are going to create Transfer Objects, add Use Case Interfaces, implement and test them. If You are familiar with the TDD approach (or just want to try it out) you may try using TDD instead of creating all the tests at the end of this exercise.
+To get familiar with the structure of the Business Logic Layer will start with the implementation of very basic CRUD (**C**reate, **R**ead, **U**pdate, **D**elete) logic. We are going to create Transfer Objects, add Use Case Interfaces, implement and test them. If you are familiar with the TDD approach (or just want to try it out) you may try using TDD instead of creating all the tests at the end of this exercise.
 
 === Transfer Objects
 
-During the previous exercise You created 6 entities: `AppointmentEntity`, `BaseEntity`, `ClientEntity`, `SpecialistEntity`, `TreatmentEntity` and `UserEntity`. Now for each entity we will create an Entity Transfer Object (`AppointmentEto`, `ClientEto`, `SpecialistEto`, `TreatmentEto`, `UserEto`).
+During the previous exercise you created 6 entities: `AppointmentEntity`, `BaseEntity`, `ClientEntity`, `SpecialistEntity`, `TreatmentEntity` and `UserEntity`. Now for each entity we will create an Entity Transfer Object (`AppointmentEto`, `ClientEto`, `SpecialistEto`, `TreatmentEto`, `UserEto`).
 
 The Transfer Objects should be located in the following package:
 
@@ -25,7 +25,7 @@ The Transfer Objects should be located in the following package:
 com.capgemini.training.appointmentbooking.common.to
 ----
 
-Entity Transfer Objects will contain the same properties as the corresponding entity, but they *should not* include any relations. You may use _Lombok_ to reduce the number of the boilerplate code. For instance, for `AppointmentEntity` the corresponding `AppointmentEto` should look as follows:
+Entity Transfer Objects will contain the same properties as the corresponding entity, but they *should not* include any relations. you may use _Lombok_ to reduce the number of the boilerplate code. For instance, for `AppointmentEntity` the corresponding `AppointmentEto` should look as follows:
 
 [source,java]
 ----
@@ -139,7 +139,7 @@ Each of the created Use Cases has to be annotated with following annotations:
 @Transactional
 ----
 
-Each Use Case implementation should implement the corresponding interface. To implement the Use Case methods we need to inject the corresponding `Repository` and just delegate the functionality to the `Repository` methods. During the implementation we will need to map from the `*Entity` to `*Eto/*Cto` or vice versa. For now, we will do it manually. If You would like to implement an automatic mapping using the _Mapscruct_ framework then please follow the instructions from <<mapstruct>> afterwards.
+Each Use Case implementation should implement the corresponding interface. To implement the Use Case methods we need to inject the corresponding `Repository` and just delegate the functionality to the `Repository` methods. During the implementation we will need to map from the `*Entity` to `*Eto/*Cto` or vice versa. For now, we will do it manually. If you would like to implement an automatic mapping using the _Mapscruct_ framework then please follow the instructions from <<mapstruct>> afterwards.
 
 Please check the following example:
 
@@ -290,7 +290,7 @@ Until now, we are only able to perform the CRUD operations on `TreatmentEntity`.
 
 === Use Case interfaces
 
-NOTE: It may be more convenient to implement the missing logic incrementally—by adding each new method to the interface, implementing it, and testing it immediately, rather than adapting all interfaces at once and implementing everything afterward. You can implement the missing logic in any order you would like, please try to implement as much logic as you can.
+NOTE: It may be more convenient to implement the missing logic incrementally—by adding each new method to the interface, implementing it, and testing it immediately, rather than adapting all interfaces at once and implementing everything afterward. you can implement the missing logic in any order you would like, please try to implement as much logic as you can.
 
 We can now extend the Use Case interfaces and add the missing logic:
 
@@ -330,7 +330,7 @@ Please cover all the newly implemented methods from the previous step with the J
 
 == (Optional) Bean validation using Hibernate Validator
 
-NOTE: This is an optional exercise, if You implemented the previous tasks, feel free to try it out.
+NOTE: This is an optional exercise, if you implemented the previous tasks, feel free to try it out.
 
 In this exercise we will implement the validation of the Transfer Objects using _Hibernate Validator_.
 
@@ -374,7 +374,7 @@ public class UserEto {
 }
 ----
 
-or if You created a record instead:
+or if you created a record instead:
 
 [source,java]
 ----
@@ -385,7 +385,7 @@ public record UserEto(Long id, @NotEmpty @Email String email, String passwordHas
 }
 ----
 
-You can similarly annotate other fields in ETOs. For example, please make sure that the name and description of the `Treatment` contains from 2 to 40 characters. Please check this for further reference or help: https://hibernate.org/validator/.
+you can similarly annotate other fields in ETOs. For example, please make sure that the name and description of the `Treatment` contains from 5 to 80 characters. Please check this for further reference or help: https://hibernate.org/validator/.
 
 === Constraint validation
 
@@ -431,7 +431,7 @@ Please add some test to verify that the added validations work as expected.
 
 == (Optional) Bean mapping using MapStruct [[mapstruct]]
 
-NOTE: This is an optional exercise, if You implemented the previous tasks, feel free to try it out.
+NOTE: This is an optional exercise, if you implemented the previous tasks, feel free to try it out.
 
 In this exercise we will implement the automatic mapping between Entities and Transfer Objects using _MapStruct_ framework.
 
@@ -492,7 +492,7 @@ Please add the mappers for each Entity/Eto and put them into the following packa
 com.capgemini.training.appointmentbooking.logic.mapper
 ----
 
-_MapStruct_ will generate the implementation for us! Of course, we can customize the mappings, but in our case this will not be necessary. If You are interested, please check the example and the documentation here: https://mapstruct.org/.
+_MapStruct_ will generate the implementation for us! Of course, we can customize the mappings, but in our case this will not be necessary. If you are interested, please check the example and the documentation here: https://mapstruct.org/.
 
 === Bean mapping
 
@@ -530,7 +530,7 @@ Please inject the mappers and use them for the Entity/Eto mappings. Then, remove
 
 === Tests
 
-You can add some tests for the mappers. However, the mapping should be already covered by the existing tests, might be that some tests will need to be adapted, but it is perfectly fine to just re-run the existing tests and check if the application still works as expected.
+you can add some tests for the mappers. However, the mapping should be already covered by the existing tests, might be that some tests will need to be adapted, but it is perfectly fine to just re-run the existing tests and check if the application still works as expected.
 
 NOTE: If you want to incorporate mappers to be used in existing unit tests, you can consider using of @Spy like shown below. Remember, don't use @Autowired in tests annotated with _@ExtendWith(MockitoExtension.class)_, because in unit tests there is no spring context started and @Autowired will not work.
 
