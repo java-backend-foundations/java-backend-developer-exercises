@@ -94,6 +94,8 @@ com.capgemini.training.appointmentbooking.logic
 
 For each entity we will create the two interfaces -- one for _Read_ and one for _Write_ operations. For `Treatment` the interfaces should look as follows:
 
+NOTE: To facilitate Treatment creation, define the transfer object which contains _name_, _description_, _durationMinutes_ and _specialistId_. This ensures that all necessary data is provided.
+
 [source,java]
 ----
 public interface ManageTreatmentUc {
@@ -151,36 +153,29 @@ public class ManageTreatmentUcImpl implements ManageTreatmentUc {
 
     private final SpecialistRepository specialistRepository;
 
-    private final TreatmentCtoMapper treatmentCtoMapper;
-
-    public ManageTreatmentUcImpl(TreatmentRepository treatmentRepository, SpecialistRepository specialistRepository, TreatmentCtoMapper treatmentCtoMapper) {
+    public ManageTreatmentUcImpl(TreatmentRepository treatmentRepository, SpecialistRepository specialistRepository) {
         this.treatmentRepository = treatmentRepository;
         this.specialistRepository = specialistRepository;
-        this.treatmentCtoMapper = treatmentCtoMapper;
     }
 
     @Override
-    public TreatmentCto createTreatment(@Valid TreatmentCreationTo treatmentCreationTo) {
-        TreatmentEntity treatmentEntity = buildTreatmentEntity(treatmentCreationTo);
+    public TreatmentCto createTreatment(TreatmentCreationTo treatmentCreationTo) {
+        TreatmentEntity treatmentEntity = toTreatmentEntity(treatmentCreationTo);
         treatmentEntity = treatmentRepository.saveAndFlush(treatmentEntity);
         return toTreatmentCto(treatmentEntity);
     }
 
-    private TreatmentEntity buildTreatmentEntity(@Valid TreatmentCreationTo treatmentCreationTo) {
-        TreatmentEntity entity = new TreatmentEntity();
+    private TreatmentEntity toTreatmentEntity(TreatmentCreationTo treatmentCreationTo) {
 
-        SpecialistEntity specialistEntity = specialistRepository.getReferenceById(treatmentCreationTo.specialistId());
+        // TODO Implement me!
 
-        entity.setName(treatmentCreationTo.name());
-        entity.setDescription(treatmentCreationTo.description());
-        entity.setDurationMinutes(treatmentCreationTo.durationMinutes());
-        entity.setSpecialist(specialistEntity);
-
-        return entity;
+        return null;
     }
 
     private TreatmentCto toTreatmentCto(TreatmentEntity treatmentEntity) {
+
         // TODO Implement me!
+
         return null;
     }
 
