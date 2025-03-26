@@ -290,9 +290,7 @@ Until now, we are only able to perform the CRUD operations on `TreatmentEntity`.
 
 === Use Case interfaces
 
-NOTE: It may be more convenient to implement the missing logic incrementally—by adding each new method to the interface, implementing it, and testing it immediately, rather than adapting all interfaces at once and implementing everything afterward.
-
-NOTE: You can implement the missing logic in any order You would like, please try to implement as much logic as You can.
+NOTE: It may be more convenient to implement the missing logic incrementally—by adding each new method to the interface, implementing it, and testing it immediately, rather than adapting all interfaces at once and implementing everything afterward. You can implement the missing logic in any order you would like, please try to implement as much logic as you can.
 
 We can now extend the Use Case interfaces and add the missing logic:
 
