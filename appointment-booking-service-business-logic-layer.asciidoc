@@ -296,24 +296,28 @@ We can now extend the Use Case interfaces and add the missing logic:
 
 - Extend `FindAppointmentUc` by adding the following methods:
 
+NOTE: To facilitate searching by specific criteria, create a separate class or record named _AppointmentCriteria_, containing the necessary fields required for search operations.
+
 [source,java]
 ----
-    Optional<AppointmentCto> findById(@NotNull Long id);
+    Optional<AppointmentCto> findById(Long id);
 
     List<AppointmentCto> findByCriteria(AppointmentCriteria criteria);
 
     List<AppointmentCto> findAll();
 
-    boolean hasConflictingAppointment(@NotNull Long specialistId, @NotNull Instant dateTime);
+    boolean hasConflictingAppointment(Long specialistId, Instant dateTime);
 ----
 
 - Create `ManageAppointmentUc` interface with the following methods:
 
+NOTE: To facilitate Appointment booking, create a separate class or record named _AppointmentBookingEto_, containing the necessary fields required for Appointment booking.
+
 [source,java]
 ----
-    AppointmentCto bookAppointment(@Valid AppointmentBookingEto appointmentBookingEto);
+    AppointmentCto bookAppointment(AppointmentBookingEto appointmentBookingEto);
 
-    AppointmentEto updateAppointmentStatus(@NotNull Long appointmentId, @NotNull AppointmentStatus appointmentStatus);
+    AppointmentEto updateAppointmentStatus(Long appointmentId, AppointmentStatus appointmentStatus);
 ----
 
 === Use Case implementation
