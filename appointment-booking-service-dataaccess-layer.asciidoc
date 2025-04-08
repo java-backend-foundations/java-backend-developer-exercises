@@ -622,7 +622,7 @@ Mark it with @ManyToOne annotation. Define fetch type as lazy.
 ==== EntitySmokeIT
 
 Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.  
-Create a new test class named _EntitySmokeTest_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest(bootstrapMode = BootstrapMode.LAZY)` to configure JPA-related components.
+Create a new test class named _EntitySmokeIT_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest(bootstrapMode = BootstrapMode.LAZY)` to configure JPA-related components.
 
 Inside the class, inject an instance of `EntityManager` using `@PersistenceContext`.
 
