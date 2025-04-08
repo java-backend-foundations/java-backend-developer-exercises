@@ -236,6 +236,21 @@ Nocycle means, the sequence will not start all over again when it reaches the ma
 
 Now create the sequences for all your entities basing off of the sequence for user.
 
+==== INDEXES
+
+Indexes can significantly improve query performance by allowing the database to quickly locate and access rows in a table based on specific columns. It’s important to create indexes on columns that are frequently used in `WHERE` clauses, `JOIN` conditions, or `ORDER BY` statements.
+
+Creating an index on a foreign key column in Oracle is a good practice — especially to avoid full table locks when the parent table rows are updated or deleted.
+
+Create an index for the `USER_ID` column in the `CLIENT` table:
+
+[source,sql]
+----
+CREATE INDEX IDX_CLIENT_USER ON CLIENT(USER_ID);
+----
+
+Now create the indexes for all your foreign keys across tables.
+
 
 ==== Mockdata
 Finally we can provide a certain amount of mock data to start our app. Add a new sql script /appointment-booking-app/src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql adding sample data:
