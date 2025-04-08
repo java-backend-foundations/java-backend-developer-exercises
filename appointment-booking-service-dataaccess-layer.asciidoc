@@ -756,11 +756,11 @@ public class BaseDataJpaTest extends BaseTest{
 }
 ----
 
-Then we will create a _BaseDataJpaTest_ that enables
+The _BaseDataJpaTest_ enables
 
-* Persistance integration testing with _@DataJpaTest_ annotation
+* Persistance integration testing via _@DataJpaTest_ annotation
 * Support for transaction (and automatic rollback) (inherited from _@DataJpaTest_ annotation)
-* Enable usage of our custom repository implementation via _@Import_ annotation
+* Usage of our custom repository implementation via _@Import_ annotation
 
 @DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
 All of the tests on @DataJpaTest will be launched on preconfigured H2 Database, so there's no configuration needed.
@@ -802,7 +802,6 @@ and you cannot have instances of interfaces.
 
 [source,java]
 ----
-@DataJpaTest
 public class AppointmentRepositoryIT extends BaseDataJpaTest {
 
     @Autowired
