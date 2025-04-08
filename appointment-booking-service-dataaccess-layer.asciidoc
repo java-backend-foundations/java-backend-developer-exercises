@@ -750,7 +750,6 @@ Then we create a base class for dataaccess layer integration test.
 ----
 package com.capgemini.training.appointmentbooking.common;
 
-@Transactional
 @DataJpaTest
 @Import(DataaccessConfiguration.class)
 public class BaseDataJpaTest extends BaseTest{
@@ -760,7 +759,7 @@ public class BaseDataJpaTest extends BaseTest{
 Then we will create a _BaseDataJpaTest_ that enables
 
 * Persistance integration testing with _@DataJpaTest_ annotation
-* Support for transaction (and automatic rollback) _@Transactional_ annotation
+* Support for transaction (and automatic rollback) (inherited from _@DataJpaTest_ annotation)
 * Enable usage of our custom repository implementation via _@Import_ annotation
 
 @DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
