@@ -315,7 +315,7 @@ If you don't have the lombok dependency yet, add it to the pom.xml:
 <dependency>
 	<groupId>org.projectlombok</groupId>
 	<artifactId>lombok</artifactId>
-	<optional>true</optional>
+	<scope>provided</scope>
 </dependency>
 ----
 
@@ -619,10 +619,10 @@ This means we only define the relationship in AppointmentEntity, making it a one
 Add a private attribute of type TreatmentEntity in AppointmentEntity.
 Mark it with @ManyToOne annotation. Define fetch type as lazy.
 
-==== EntitySmokeTest
+==== EntitySmokeIT
 
 Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.  
-Create a new test class named _EntitySmokeTest_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest` to configure JPA-related components.
+Create a new test class named _EntitySmokeIT_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest(bootstrapMode = BootstrapMode.LAZY)` to configure JPA-related components.
 
 Inside the class, inject an instance of `EntityManager` using `@PersistenceContext`.
 
@@ -660,7 +660,61 @@ You are ready to go!
 === Repositories
 
 To perform operations on our entities we need to create repositories for each of them. They will contain operations specific for each of the objects.
-Repositories used in Spring are already defined as Interface called Repository. There are multiple extensions of this interface and we will use JpaRepository<ENTITY, ID>.
+Repositories used in Spring are already defined as Interface called _Repository_. There are multiple extensions of this interface and we will use _JpaRepository<ENTITY, ID>_.
+
+==== Create custom repository infrastructure
+In complex projects, it is recommended to consider creating a custom repository interface.
+Advanced use cases often require the use of sophisticated mechanisms provided by the EntityManager. For this reason, we will create our own repository interface.
+
+===== Custom repository interface
+Create custom _JpaRepository_ interface that will enable access to _EntityManager_
+
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.repository;
+
+@NoRepositoryBean
+public interface BaseJpaRepository<T, ID> extends JpaRepository<T, ID> {
+    EntityManager getEntityManager();
+}
+----
+
+===== Custom repository implementation
+Create custom repository implementation
+
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.repository.impl;
+
+public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> implements BaseJpaRepository<T, ID> {
+
+    private final EntityManager entityManager;
+
+    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation, EntityManager entityManager) {
+        super(entityInformation, entityManager);
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    public EntityManager getEntityManager() {
+        return this.entityManager;
+    }
+
+}
+----
+
+===== Configure Spring to use custom repositories
+Now we need to configure Spring to use our custom repository
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.config;
+
+@Configuration
+@EnableJpaRepositories(
+    repositoryBaseClass = BaseJpaRepositoryImpl.class,
+    basePackages = "com.capgemini.training.appointmentbooking.dataaccess.repository")
+public class DataaccessConfiguration {}
+----
 
 ==== AppointmentRepository
 
@@ -669,14 +723,57 @@ In the component appointmentbooking, create package dataaccess.repository. We wi
 Create interface _AppointmentRepository_. It should extend _JpaRepository_ from Spring which contains all basic operations along with methods used in sorting and paging of results. This Interface is generic.
 [source,java]
 ----
-public interface AppointmentRepository extends JpaRepository<AppointmentEntity, Long> {
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
     // Add imports and that's it
 }
 ----
 
-==== AppointmentRepositoryTest
+==== Create basic dataaccess layer integration tests infrastructure
+First we will create a _BaseTest_ that will enable AssertJ assertions.
 
-With such repository we can already perform basic CRUD operations, f.e. save, deleteById, findById.
+[source, java]
+----
+package com.capgemini.training.appointmentbooking.common;
+
+public class BaseTest implements WithAssertions {
+
+    protected Instant toInstant(String date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return LocalDateTime.parse(date, formatter).atZone(ZoneId.systemDefault()).toInstant();
+    }
+}
+----
+
+Then we create a base class for dataaccess layer integration test.
+
+[source, java]
+----
+package com.capgemini.training.appointmentbooking.common;
+
+@DataJpaTest
+@Import(DataaccessConfiguration.class)
+public class BaseDataJpaTest extends BaseTest{
+}
+----
+
+The _BaseDataJpaTest_ enables
+
+* Persistance integration testing via _@DataJpaTest_ annotation
+* Support for transaction (and automatic rollback) (inherited from _@DataJpaTest_ annotation)
+* Usage of our custom repository implementation via _@Import_ annotation
+
+@DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
+All of the tests on @DataJpaTest will be launched on preconfigured H2 Database, so there's no configuration needed.
+Remember, that by default all @Test methods in a @DataJpaTest annotated test class will be automatically rolled back and not commited.
+This actually may cause some of your database-specific constraints to not be actually checked, only your Entity annotations
+- and that's a plus, because the tests are much faster, and you should add constraints to BOTH db and Entities.
+Just like you should do frontend AND backend validation.
+
+
+
+==== AppointmentRepositoryIT
+
+With a standard repository we can already perform basic CRUD operations, f.e. save, deleteById, findById.
 
 We can test the behaviour of Repository methods using unit tests. Remember that we do not test the framework itself but our usage of it. Still writing test for simple CRUD operations is usually not needed. We will write some simple tests nevertheless, just to understand the structure and behaviour of repository tests using @DataJpaTest
 
@@ -686,17 +783,9 @@ This will enable you to test this class package protected (default visibility) m
 Create the class _AppointmentRepositoryTest_. Remember to add imports.
 [source,java]
 ----
-
-@DataJpaTest
-public class AppointmentRepositoryTest  {}
+public class AppointmentRepositoryIT extends BaseDataJpaTest {}
 ----
 
-@DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
-All of the tests on @DataJpaTest will be launched on preconfigured H2 Database, so there's no configuration needed.
-Remember, that by default all @Test methods in a @DataJpaTest annotated test class will be automatically rolled back and not commited.
-This actually may cause some of your database-specific constraints to not be actually checked, only your Entity annotations
-- and that's a plus, because the tests are much faster, and you should add constraints to BOTH db and Entities.
-Just like you should do frontend AND backend validation.
 
 ===== FindAll test
 
@@ -713,8 +802,7 @@ and you cannot have instances of interfaces.
 
 [source,java]
 ----
-@DataJpaTest
-public class AppointmentRepositoryTest {
+public class AppointmentRepositoryIT extends BaseDataJpaTest {
 
     @Autowired
     private AppointmentRepository appointmentRepository; //some IDE's wrongfully mark this var as unused
@@ -841,12 +929,8 @@ If the name will match, then you will be able to run the named query from interf
 
 === Custom Queries
 
-To implement custom queries we need to have access to the EntityManager.
-The easiest way is to write default methods and using the entityManager as parameter.
-This breaks SOLID but is definitely quicker if you just want to test something out.
-
-The proper way to use the entityManager without receiving it as a param, is to implement a customRepo and extending your main repo with it,
-thus keeping our SOLID rules in check and having a way to implement methods manually.
+To implement custom queries we need to have access to the _EntityManager_.
+It is very easy since we have already created a _BaseJpaRepository_.
 
 First, we need to define a class with the fields that will be used for searching.
 Create a _UserCriteria_ class in the criteria package to encapsulate search parameters.
@@ -857,41 +941,17 @@ public record UserCriteria(String firstName, String lastName, String email) {
 }
 ----
 
-In the repository package, create a _CustomUserRepository_. It will contain method signatures for your JpaRepository.
+Now extend your own interface repository with _BaseJpaRepository_ and implement a method.
 
 [source,java]
 ----
-public interface CustomUserRepository {
+@Repository
+public interface UserRepository extends BaseJpaRepository<UserEntity, Long> {
+    default List<UserEntity> findByCriteria(UserCriteria criteria) {
 
-    List<UserEntity> findByCriteria(UserCriteria c);
-}
-----
-
-Create a custom implementation of your Custom repository. Here Spring does some interpreting, so to avoid exceptions all of the interfaces and classes should be in same package and have corresponding name.
-Class implementing the custom repository has to have a name ending with Impl - _CustomUserRepositoryImpl_.
-Write your own implementation there
-
-[source,java]
-----
-public class CustomUserRepositoryImpl implements CustomUserRepository {
-
-    @PersistenceContext
-    private EntityManager entityManager;
-
-	@Override
-	public List<UserEntity> findByCriteria(UserCriteria searchCriteria) {
-		// implementation
+        EntityManager entityManager = getEntityManager();
+        // query the database using entityManager, criteria api or querydsl
     }
-}
-----
-
-Now extend your own interface repository with BOTH _JpaRepository_ and _CustomUserRepository_.
-Your _UserRepository_ will now understand that it has those custom methods already implemented.
-
-[source,java]
-----
-public interface UserRepository extends JpaRepository<UserEntity, Long>, CustomUserRepository {
-    // no more implementation needed here
 }
 ----
 
@@ -985,7 +1045,7 @@ QueryDSL allows us to write us easy queries. In _ClientRepository_ we can add th
 [source,java]
 ----
 @Repository
-public interface ClientRepository extends JpaRepository<ClientEntity, Long> {
+public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {
 
     default List<ClientEntity> findByName(String firstName, String lastName, EntityManager entityManager) {
         JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
@@ -1007,8 +1067,7 @@ And then simply test it:
 
 [source,java]
 ----
-@DataJpaTest
-public class ClientRepositoryTest {
+public class TreatmentRepositoryIT extends BaseDataJpaTest  {
 
     @Autowired
     private ClientRepository clientRepository;
