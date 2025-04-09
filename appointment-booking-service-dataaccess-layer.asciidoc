@@ -1121,7 +1121,7 @@ Implement these queries:
 
 Remember to test your queries!
 
-==== Hints and Troubleshooting
+== Hints and Troubleshooting
 
 During your implementation you may encounter multiple vague exceptions.
 JPA Exceptions look sometimes like they are wrapped or hidden, so careful console logs analysis is required.
