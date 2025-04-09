@@ -1,0 +1,563 @@
+:toc: macro
+:sectnums:
+:sectnumlevels: 3
+
+= Appointment Booking System - Business Logic Layer
+
+In this chapter we are going to create business logic layer for already implemented database queries. We are going to prepare UseCases together with Transfer Objects and corresponding tests.
+
+The chapter contains 4 exercises -- the first two are essential, third and forth exercise are optional, and they can be done in any order.
+
+toc::[]
+
+== Design of the Logic Layer and implementation of the first CRUD Use Cases
+
+To get familiar with the structure of the Business Logic Layer will start with the implementation of very basic CRUD (**C**reate, **R**ead, **U**pdate, **D**elete) logic. We are going to create Transfer Objects, add Use Case Interfaces, implement and test them. If you are familiar with the TDD approach (or just want to try it out) you may try using TDD instead of creating all the tests at the end of this exercise.
+
+=== Transfer Objects
+
+During the previous exercise you created 6 entities: `AppointmentEntity`, `BaseEntity`, `ClientEntity`, `SpecialistEntity`, `TreatmentEntity` and `UserEntity`. Now for each entity we will create an Entity Transfer Object (`AppointmentEto`, `ClientEto`, `SpecialistEto`, `TreatmentEto`, `UserEto`). Omit `BaseEto`, as it is not needed.
+
+The Transfer Objects should be located in the following package:
+
+[source,java]
+----
+com.capgemini.training.appointmentbooking.common.to
+----
+
+Entity Transfer Objects will contain the same properties as the corresponding entity, but they *should not* include any relations. You may use _Lombok_ to reduce the number of the boilerplate code. For instance, for `TreatmentEntity` the corresponding `TreatmentEto` should look as follows:
+
+[source,java]
+----
+@Data
+@Builder
+public class TreatmentEto  {
+    private final Long id;
+    private final String name;
+    private final String description;
+}
+----
+
+We used here two _Lombok_ annotations (`@Data` and `@Builder`). `@Data` is a convenient shortcut annotation that bundles the features of `@ToString`, `@EqualsAndHashCode`, `@Getter` / `@Setter` and `@RequiredArgsConstructor` together. The `@Builder` annotation introduces the Builder pattern into our POJO class.
+
+It is considered to be a good practice to make Transfer Objects immutable (as in the example above). Since Java 14 we can create a record instead of a class:
+
+[source,java]
+----
+@Builder
+public record TreatmentEto(Long id, String name, String description, int durationMinutes) {
+}
+----
+
+Please implement the Transfer Objects for the remaining entities (except `BaseEntity`) on your own.
+
+=== Transfer Object composition
+
+To be able to create `Appointment` with a `Treatment` and/or `Treatment` with its `Specialist` we have to create Composite Transfer Objects containing all the necessary data. Therefore, we will create:
+
+- `AppointmentCto` which will reference to `AppointmentEto`, `ClientEto`,  and `TreatmentCto`.
+- `TreatmentCto` which will reference to `TreatmentEto` and `SpecialistEto`.
+
+`TreatmentCto` should look like this:
+
+[source,java]
+----
+@Data
+@Builder
+public class TreatmentCto {
+    private final TreatmentEto treatmentEto;
+    private final SpecialistEto specialistEto;
+}
+----
+
+or like this:
+
+[source,java]
+----
+@Builder
+public record TreatmentCto(TreatmentEto treatmentEto, SpecialistEto specialistEto) {
+}
+----
+
+Please add `AppointmentCto` on your own.
+
+=== Use Case interfaces
+
+During this step we will start defining the API for our Business Logic Layer. Therefore, we will create the interfaces for our Use Cases. We are going to implement CRUD operations for two entities: `Appointment` and `Treatment`.
+
+The Use Case Interfaces should be located in the following package:
+
+[source,java]
+----
+com.capgemini.training.appointmentbooking.logic
+----
+
+For each entity we will create the two interfaces -- one for _Read_ and one for _Write_ operations. For `Treatment` the interfaces should look as follows:
+
+NOTE: To facilitate Treatment creation, define the transfer object which contains _name_, _description_, _durationMinutes_ and _specialistId_. This ensures that all necessary data is provided.
+
+[source,java]
+----
+public interface ManageTreatmentUc {
+
+    TreatmentCto createTreatment(TreatmentCreationTo treatmentCreationTo);
+
+}
+----
+
+[source,java]
+----
+public interface FindTreatmentUc {
+
+    Optional<TreatmentCto> findById(Long id);
+
+    List<TreatmentCto> findAll();
+
+    List<TreatmentCto> findByCriteria(TreatmentCriteria criteria);
+
+}
+----
+
+Add similar Interfaces also for `Appointment`.
+
+=== Use Case implementation
+
+As the next step you should implement the interfaces created in the previous step.
+
+Please locate the Use Case implementations in following package:
+
+[source,java]
+----
+com.capgemini.training.appointmentbooking.logic.impl
+----
+
+Each of the created Use Cases has to be annotated with following annotations:
+
+[source,java]
+----
+@Service
+@Transactional
+----
+
+Each Use Case implementation should implement the corresponding interface. To implement the Use Case methods we need to inject the corresponding `Repository` and just delegate the functionality to the `Repository` methods. During the implementation we will need to map from the `*Entity` to `*Eto/*Cto` or vice versa. For now, we will do it manually. If you would like to implement an automatic mapping using the _Mapscruct_ framework then please follow the instructions from <<mapstruct>> afterwards.
+
+Please check the following example:
+
+[source,java]
+----
+@Service
+@Transactional
+public class ManageTreatmentUcImpl implements ManageTreatmentUc {
+
+    private final TreatmentRepository treatmentRepository;
+
+    public ManageTreatmentUcImpl(TreatmentRepository treatmentRepository) {
+        this.treatmentRepository = treatmentRepository;
+    }
+
+    @Override
+    public TreatmentCto createTreatment(TreatmentCreationTo treatmentCreationTo) {
+        TreatmentEntity treatmentEntity = toTreatmentEntity(treatmentCreationTo);
+        treatmentEntity = treatmentRepository.saveAndFlush(treatmentEntity);
+        return toTreatmentCto(treatmentEntity);
+    }
+
+    private TreatmentEntity toTreatmentEntity(TreatmentCreationTo treatmentCreationTo) {
+
+        // TODO Implement me!
+
+        return null;
+    }
+
+    private TreatmentCto toTreatmentCto(TreatmentEntity treatmentEntity) {
+
+        // TODO Implement me!
+
+        return null;
+    }
+
+}
+----
+
+Please implement all the Use Cases.
+
+=== Tests
+
+In this section, we will test the business logic layer of our _Spring Boot_ application.
+
+To do this, we can create test classes that are aware of the _Spring Boot_ context, ensuring our business logic is properly validated. By extending our test classes with _BaseTest_, we maintain consistency in utility methods and assertions across all tests.
+
+The _BaseTest_ class implements _WithAssertions_, which likely provides enhanced assertion capabilities, making tests more readable and robust. Additionally, it includes the _toInstant_ method, which converts a date-time _String_ (formatted as "yyyy-MM-dd HH:mm:ss") into an _Instant_. This method ensures consistent date-time conversions across test cases.
+
+Make sure to extend the _BaseTest_ class in all your tests.
+
+----
+package com.capgemini.training.appointmentbooking.common;
+
+public class BaseTest implements WithAssertions {
+
+    protected Instant toInstant(String date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return LocalDateTime.parse(date, formatter).atZone(ZoneId.systemDefault()).toInstant();
+    }
+
+}
+----
+
+Now we’ll create a test class that will be started without web environment context:
+
+[source,java]
+----
+@Transactional
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+class ManageTreatmentUcTestIT extends BaseTest {
+
+    @Inject
+    private ManageTreatmentUc manageTreatmentUc;
+
+    @Test
+    void shouldCreateTreatment() {
+
+    }
+
+}
+----
+
+In our case, the above integration tests will be relatively fast. However, to run such test we need to start the application context and the tests themselves will talk to the database, so in the real-live scenarios such tests can be very slow. Fortunately, we should already have our repositories tested, so to test our logic layer we can just mock them:
+
+[source,java]
+----
+@ExtendWith(MockitoExtension.class)
+public class FindTreatmentUcImplTest extends BaseTest {
+
+    @Mock
+    private TreatmentRepository treatmentRepository;
+
+    @InjectMocks
+    private FindTreatmentUcImpl findTreatmentUc;
+
+    @Spy
+    private static TreatmentMapper treatmentMapper = Mappers.getMapper(TreatmentMapper.class);
+
+    @Spy
+    private static TreatmentCtoMapper treatmentCtoMapper = Mappers.getMapper(TreatmentCtoMapper.class);
+
+    @Test
+    void shouldFindTreatmentById() {
+        // given
+        Long treatmentId = -1L;
+        TreatmentEntity treatmentEntity = new TreatmentEntity();
+        treatmentEntity.setId(treatmentId);
+        treatmentEntity.setName("Dummy Name");
+        treatmentEntity.setDescription("Dummy Description");
+
+        when(treatmentRepository.findById(treatmentId)).thenReturn(Optional.of(treatmentEntity));
+
+        // when
+        Optional<TreatmentCto> treatmentCto = findTreatmentUc.findById(treatmentId);
+
+        // then
+        assertThat(treatmentCto).isPresent();
+        treatmentCto.ifPresent(a -> {
+            assertThat(a.treatmentEto().id()).isEqualTo(treatmentEntity.getId());
+            assertThat(a.treatmentEto().name()).isEqualTo(treatmentEntity.getName());
+            assertThat(a.treatmentEto().description()).isEqualTo(treatmentEntity.getDescription());
+        });
+    }
+
+    @Test
+    void shouldFindAllTreatments() {
+        // ...
+    }
+
+}
+----
+
+Now we can implement some tests. Please provide some valid test cases for each method defined in our Use Cases -- please test that each covered entity can be correctly created, updated, deleted and read.
+
+== Implementation of further Use Cases
+
+Until now, we are only able to perform the CRUD operations on `TreatmentEntity`. However, we cannot create `AppointmentEntity` as well as fill the relationships between our entities. During this exercise we will add some more sophisticated logic:
+
+- Book `Appointment` for specific `clientId` and `treatmentId`.
+- Update `Appointment` status for specific `appointmentId`.
+- Find `Appointment` by `id`
+- Find `Appointment` by `criteria`
+- Check if there is any conflicting `Appointment` for specific `specialistId` and `dateTime`.
+
+=== Use Case interfaces
+
+NOTE: It may be more convenient to implement the missing logic incrementally—by adding each new method to the interface, implementing it, and testing it immediately, rather than adapting all interfaces at once and implementing everything afterward. You can implement the missing logic in any order you would like, please try to implement as much logic as you can.
+
+We can now extend the Use Case interfaces and add the missing logic:
+
+- Extend `FindAppointmentUc` by adding the following methods:
+
+NOTE: To facilitate searching by specific criteria, create a separate class or record named _AppointmentCriteria_, containing the necessary fields required for search operations.
+
+[source,java]
+----
+    Optional<AppointmentCto> findById(Long id);
+
+    List<AppointmentCto> findByCriteria(AppointmentCriteria criteria);
+
+    List<AppointmentCto> findAll();
+
+    boolean hasConflictingAppointment(Long specialistId, Instant dateTime);
+----
+
+- Create `ManageAppointmentUc` interface with the following methods:
+
+NOTE: To facilitate Appointment booking, create a separate class or record named _AppointmentBookingEto_, containing the necessary fields required for Appointment booking.
+
+[source,java]
+----
+    AppointmentCto bookAppointment(AppointmentBookingEto appointmentBookingEto);
+
+    AppointmentEto updateAppointmentStatus(Long appointmentId, AppointmentStatus appointmentStatus);
+----
+
+=== Use Case implementation
+
+Please implement all the unimplemented methods added in the previous step.
+
+=== Tests
+
+Please cover all the newly implemented methods from the previous step with the JUnit tests.
+
+== (Optional) Bean validation using Hibernate Validator
+
+NOTE: This is an optional exercise, if you implemented the previous tasks, feel free to try it out.
+
+In this exercise we will implement the validation of the Transfer Objects using _Hibernate Validator_.
+
+=== Configuration
+
+Starting with Boot 2.3, we need to explicitly add the spring-boot-starter-validation dependency to `pom.xml`. It was also possible to add it via _Spring Initializr_. Please add the following dependency if it is missing:
+
+[source, xml]
+----
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-validation</artifactId>
+</dependency>
+----
+
+=== Constraint definition
+
+_Hibernate Validator_ offers validation annotations that can be applied to the data fields within our classes. For example if we would like to ensure that the `UserEto` will contain a non-empty, valid email address we can annotate it as follows:
+
+[source,java]
+----
+@Data
+@Builder
+public class UserEto {
+
+    private Long id;
+
+    @NotEmpty
+    @Email
+    private String email;
+
+    private String passwordHash;
+
+    @NotNull
+    @Size(min = 3, max = 20)
+    private String firstName;
+
+    @NotNull
+    @Size(min = 3, max = 20)
+    private String lastName;
+}
+----
+
+or if you created a record instead:
+
+[source,java]
+----
+@Builder
+public record UserEto(Long id, @NotEmpty @Email String email, String passwordHash,
+                      @NotNull @Size(min = 3, max = 20) String firstName,
+                      @NotNull @Size(min = 3, max = 20) String lastName) {
+}
+----
+
+You can similarly annotate other fields in ETOs. For example, please make sure that the name and description of the `Treatment` contains from 5 to 80 characters. Please check this for further reference or help: https://hibernate.org/validator/.
+
+=== Constraint validation
+
+The validation will not work out-of-the box. To enable it we have to put the `@Valid` annotation on the method parameters or fields to tell Spring that we want a method parameter or field to be validated. We should annotate at least the method parameter in the interface, but it is considered a good practice to annotate it also in the implementation. Additionally, we should add a class-level `@Validated` annotation to tell Spring to validate parameters that are passed into a method of the annotated class.
+
+If we want to do it for the `ManageTreatmentUc` Use Case, then the interface and implementation should look as follows:
+
+[source,java]
+----
+public interface ManageTreatmentUc {
+
+    TreatmentCto createTreatment(@Valid TreatmentCreationTo treatmentCreationTo);
+
+}
+----
+
+[source,java]
+----
+@Service
+@Transactional
+@Validated
+public class ManageTreatmentUcImpl implements ManageTreatmentUc {
+
+    // ...
+
+    @Override
+    public TreatmentCto createTreatment(@Valid TreatmentCreationTo treatmentCreationTo) {
+
+        // ...
+
+    }
+
+    // ...
+
+}
+----
+
+Please add similar validations for other Use Cases.
+
+=== Tests
+
+Please add some test to verify that the added validations work as expected.
+
+== (Optional) Bean mapping using MapStruct [[mapstruct]]
+
+NOTE: This is an optional exercise, if you implemented the previous tasks, feel free to try it out.
+
+In this exercise we will implement the automatic mapping between Entities and Transfer Objects using _MapStruct_ framework.
+
+=== Configuration
+
+To use _MapStruct_ we need to add the dependency to the `pom.xml`. At the time of writing the most recent _MapStruct_ version is `1.5.5.Final`. The current version can be checked here: https://mapstruct.org/documentation/installation/.
+
+Please add the following dependencies (I recommend defining the version as a Maven property):
+
+[source, xml]
+----
+    <properties>
+        <java.version>21</java.version>
+        <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
+    </properties>
+
+    ...
+
+    <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct</artifactId>
+        <version>${org.mapstruct.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct-processor</artifactId>
+        <version>${org.mapstruct.version}</version>
+        <scope>provided</scope>
+    </dependency>
+----
+
+
+=== Mappers
+
+_MapStruct_ is a code generator that simplifies the implementation of mappings between Java bean types based on a convention over configuration approach. To generate a mapper we will create a mapping interface annotated with `@Mapper`. By default, MapStruct will automatically map properties where the property name and types match. It will also map automatically if it can safely do an implicit type conversation.
+
+Here is the example of the Mapper for mapping between `AppointmentEntity` and `AppointmentEto`:
+
+[source,java]
+----
+@Mapper
+public interface AppointmentMapper {
+
+    @Mapping(target = "client", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "treatment", ignore = true)
+    AppointmentEntity toEntity(AppointmentEto eto);
+
+    AppointmentEto toEto(AppointmentEntity entity);
+
+}
+----
+
+Please add the mappers for each Entity/Eto and put them into the following package:
+
+[source,java]
+----
+com.capgemini.training.appointmentbooking.logic.mapper
+----
+
+_MapStruct_ will generate the implementation for us! Of course, we can customize the mappings, but in our case this will not be necessary. If you are interested, please check the example and the documentation here: https://mapstruct.org/.
+
+=== Bean mapping
+
+The mapper can be now injected into our Use Case implementations as any other Spring Component:
+
+[source,java]
+----
+@Service
+@Transactional
+public class ManageAppointmentUcImpl implements ManageAppointmentUc {
+
+    private final AppointmentRepository appointmentRepository;
+
+    private final AppointmentMapper appointmentMapper;
+
+    public ManageAppointmentUcImpl(AppointmentRepository appointmentRepository, AppointmentMapper appointmentMapper) {
+        this.appointmentRepository = appointmentRepository;
+        this.appointmentMapper = appointmentMapper;
+    }
+
+    @Override
+    public AppointmentEto updateAppointmentStatus(Long appointmentId, AppointmentStatus appointmentStatus) {
+
+        // ...
+
+        return appointmentMapper.toEto(appointmentEntity);
+    }
+
+    // ...
+
+}
+----
+
+Please inject the mappers and use them for the Entity/Eto mappings. Then, remove all the methods needed for manual mapping from all the Use Case implementation.
+
+=== Tests
+
+You can add some tests for the mappers. However, the mapping should be already covered by the existing tests, might be that some tests will need to be adapted, but it is perfectly fine to just re-run the existing tests and check if the application still works as expected.
+
+NOTE: If you want to incorporate mappers to be used in existing unit tests, you can consider using of @Spy like shown below. Remember, don't use @Autowired in tests annotated with _@ExtendWith(MockitoExtension.class)_, because in unit tests there is no spring context started and @Autowired will not work.
+
+[source,java]
+----
+    @Spy
+    private static AppointmentMapper appointmentMapper = Mappers.getMapper(AppointmentMapper.class);
+----
+
+If your mapper depends on other mappers, you need to provide explicit mapping configuration. Without this, your tests will likely encounter NullPointerException (NPE).
+
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.logic.mapper;
+
+@Configuration
+class MappingConfiguration {
+
+    @Bean
+    AppointmentMapper getAppointmentMapper() {
+        return Mappers.getMapper(AppointmentMapper.class);
+    }
+
+    // ...
+
+}
+----
+
+== Navigation
+[grid=cols]
+|===
+| <= link:appointment-booking-service-dataaccess-layer.asciidoc[Previous Chapter: Appointment Booking System - Dataaccess Layer] | link:appointment-booking-service-services-layer.asciidoc[Next Chapter: Appointment Booking System - Services Layer] =>
+|===

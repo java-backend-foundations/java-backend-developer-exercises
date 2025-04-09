@@ -1139,5 +1139,5 @@ but the test or app does not run.
 == Navigation
 [grid=cols]
 |===
-| <= link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
+link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-business-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
 |===
