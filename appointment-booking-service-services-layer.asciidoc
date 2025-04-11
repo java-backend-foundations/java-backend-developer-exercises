@@ -218,8 +218,8 @@ You can also check the generated inferfaces for the `AppointmentApi` and `Treatm
 
 While implementing the controllers, you need to test the services layer to ensure that the implementation is correct. 
 
-- You can use the `MockMvc` framework to test the controllers. Please refer to the link:#_implementing_the_tests[Implementing the Tesst] section for more details on how to implement the test cases for the services layer.
-- You can use Swagger to test the API endpoints. Swagger provides a user interface that allows you to test the API endpoints directly from the browser. Please refer link:#_testing_the_services_layer[Testing the Services Layer]  for more details on how to test the services layer.
+- You can use the `MockMvc` framework to test the controllers. Please refer to the link:#implementing-the-tests[Implementing the Tesst] section for more details on how to implement the test cases for the services layer.
+- You can use Swagger to test the API endpoints. Swagger provides a user interface that allows you to test the API endpoints directly from the browser. Please refer link:#testing-the-services-layer[Testing the Services Layer]  for more details on how to test the services layer.
 
 
 While implementing the services, you can use the `@Valid` annotation to validate the incoming request parameters. This will ensure that the request data is valid before processing it. You can also use the `@NotNull` and `@DateTimeFormat` annotations to specify additional validation constraints on the request parameters. The @Validated annotation, which enables the validation on the class, has already been added by the generator to the generated api interfaces.
