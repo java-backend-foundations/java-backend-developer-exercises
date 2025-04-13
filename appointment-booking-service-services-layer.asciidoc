@@ -8,6 +8,18 @@ In this chapper we are going to create the services layer of the appointment boo
 
 toc::[]
 
+== Adding UI (Optional)
+
+It’s always rewarding to see the results of an implementation in a working application. For the purpose of this training, a simple user interface has been created to visualize the outcomes of your implementation and facilitate testing. A Git patch has also been provided to add this functionality to your application.
+
+Please download the file link:assets/0001-Added-UI-to-be-served-by-Spring-Boot.patch[0001-Added-UI-to-be-served-by-Spring-Boot.patch] to root directory of your project and apply patch by executing following command
+[source]
+----
+git apply 0001-Added-UI-to-be-served-by-Spring-Boot.patch
+----
+
+You should be able to see application under link:http://localhost:8080[]
+
 == Services Layer Overview
 
 We have predefined Openapi specification for the services layer. 
