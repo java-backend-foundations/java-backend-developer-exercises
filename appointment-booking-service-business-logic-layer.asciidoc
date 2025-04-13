@@ -303,7 +303,7 @@ NOTE: To facilitate searching by specific criteria, create a separate class or r
 
     List<AppointmentCto> findAll();
 
-    boolean hasConflictingAppointment(Long specialistId, Instant dateTime);
+    boolean hasConflictingAppointment(Long specialistId, Instant dateTime, Instant endDateTime));
 ----
 
 - Create `ManageAppointmentUc` interface with the following methods:
