@@ -370,6 +370,7 @@ void shouldCreateTreatmentAndReturn201() throws Exception {
 
 
 Please try to test some of the positive and negative scenarios. For example, you can test the following scenarios:
+
 - Creating a treatment with valid parameters and verifying that the response status is `201 Created`.
 - Creating a treatment with invalid parameters and verifying that the response status is `400 Bad Request`.
 - Retrieving a treatment by ID and verifying that the response status is `200 OK`.
@@ -410,6 +411,7 @@ public class AppointmentsApiControllerTest extends BaseTest {
 ----
 
 Try to test some of the positive and negative scenarios. For example, you can test the following scenarios:
+
 - Creating an appointment with valid parameters and verifying that the response status is `201 Created`.
 - Creating an appointment with invalid parameters and verifying that the response status is `400 Bad Request`.
 - Retrieving appointments with valid parameters and verifying that the response status is `200 OK`.
