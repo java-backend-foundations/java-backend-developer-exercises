@@ -4,10 +4,457 @@
 
 = Appointment Booking System - Services Layer
 
-TODO
+In this chapper we are going to create the services layer of the appointment booking system. The services layer is responsible for handling requests from the outside of the backend (e.g. from the presentation layer or from external systems) and orchestrating the interaction between the business logic layer and the external systems. It provides a set of services that can be used by the external systems to perform various operations related to appointment booking.
+
+toc::[]
+
+== Adding UI (Optional)
+
+It’s always rewarding to see the results of an implementation in a working application. For the purpose of this training, a simple user interface has been created to visualize the outcomes of your implementation and facilitate testing. A Git patch has also been provided to add this functionality to your application.
+
+Please download the file link:assets/0001-Added-UI-to-be-served-by-Spring-Boot.patch[0001-Added-UI-to-be-served-by-Spring-Boot.patch] to root directory of your project and apply patch by executing following command
+[source]
+----
+git apply 0001-Added-UI-to-be-served-by-Spring-Boot.patch
+----
+
+You should be able to see application under link:http://localhost:8080[]
+
+== Services Layer Overview
+
+We have predefined Openapi specification for the services layer. 
+
+image::images/service/api-services.png[Service Layer Overview]
+
+The Openapi specification defines the endpoints, request and response formats, and other details of the services layer. You can find the specification in the `api` folder of the project. The Openapi specification is in YAML format and can be used to generate the code for the services layer using tools like Swagger Codegen or OpenAPI Generator.
+
+The services will be implemented using the Spring framework. The Spring framework provides a set of annotations and libraries that make it easy to create RESTful web services. The services layer will be implemented as a set of Spring controllers that handle the incoming requests and return the appropriate responses.  
+
+== Setup the Services Layer
+
+=== Add OpenAPI dependencies
+
+Please add following dependencies into the `pom.xml` file of your project:
+
+1. Open the `pom.xml` file of your project.
+2. Add the following configuration under the `<dependencies>` section:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.swagger.core.v3</groupId>
+    <artifactId>swagger-annotations</artifactId>
+    <version>2.2.28</version>
+</dependency>
+
+<dependency>
+    <groupId>org.openapitools</groupId>
+    <artifactId>jackson-databind-nullable</artifactId>
+    <version>0.2.6</version>
+</dependency>
+
+<!-- Dependencies for OpenAPI documentation and Swagger UI -->
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.8.5</version>
+</dependency>
+----
+
+=== Configuring the OpenAPI Generator Maven Plugin
+
+To generate the services layer code from the OpenAPI specification, we will use the `openapi-generator-maven-plugin`. This plugin allows us to automate the code generation process during the Maven build.
+
+To configure the `openapi-generator-maven-plugin`, follow these steps:
+
+1. Open the `pom.xml` file of your project.
+2. Add the following configuration under the `<plugins>` section:
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.openapitools</groupId>
+    <artifactId>openapi-generator-maven-plugin</artifactId>
+    <version>7.11.0</version>
+    <executions>
+        <execution>
+            <id>appointmentBooking</id>
+            <goals>
+                <goal>generate</goal>
+            </goals>
+            <configuration>
+                <inputSpec>${project.basedir}/api/openapi.yml</inputSpec>
+                <output>${project.build.directory}/generated-sources/openapi</output>
+                <cleanupOutput>true</cleanupOutput>
+                <generatorName>spring</generatorName>
+                <apiPackage>com.capgemini.training.appointmentbooking.service.api</apiPackage>
+                <modelPackage>com.capgemini.training.appointmentbooking.service.model</modelPackage>
+                <generateApiTests>false</generateApiTests>
+                <generateModelTests>false</generateModelTests>
+                <configOptions>
+                    <useTags>true</useTags>
+                    <library>spring-boot</library>
+                    <interfaceOnly>true</interfaceOnly>
+                    <skipDefaultInterface>true</skipDefaultInterface>
+                    <useSpringBoot3>true</useSpringBoot3>
+                    <useOptional>true</useOptional>
+                    <useBeanValidation>true</useBeanValidation>
+                    <dateLibrary>java-time</dateLibrary>
+                    <generateBuilders>false</generateBuilders>
+                    <generateConstructorWithAllArgs>true</generateConstructorWithAllArgs>
+                    <additionalModelTypeAnnotations>
+                        @lombok.Generated
+                        @lombok.ToString
+                    </additionalModelTypeAnnotations>
+                    <documentationProvider>source</documentationProvider>
+                    <annotationLibrary>swagger2</annotationLibrary>
+                </configOptions>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+----
+
+This configuration ensures that the generated code is tailored to your project's requirements, making it easier to integrate and maintain.
+
+Below is a detailed explanation of the configuration parameters used in the `openapi-generator-maven-plugin`:
+
+- **`<inputSpec>`**: Specifies the path to the OpenAPI specification file.
+- **`<output>`**: Defines the directory where the generated code will be placed.
+- **`<cleanupOutput>`**: If set to `true`, it cleans up the output directory before generating new code. This ensures that no stale or outdated files remain in the output directory.
+- **`<generatorName>`**: Specifies the generator to use for code generation.
+- **`<apiPackage>`**: Defines the package where the API interfaces (controllers) will be generated.
+- **`<modelPackage>`**: Defines the package where the model classes (data transfer objects) will be generated.
+- **`<generateApiTests>`**: If set to `false`, it disables the generation of API test classes.
+- **`<generateModelTests>`**: If set to `false`, it disables the generation of model test classes.
+- **`<configOptions>`**:
+* Provides additional configuration options for the generator. Key options include:
+** **`<useTags>`**: If `true`, uses tags in the OpenAPI spec to group API operations.
+** **`<library>`**: Specifies the library to use. Example: `spring-boot` for Spring Boot applications.
+** **`<interfaceOnly>`**: If `true`, generates only the interfaces for controllers.
+** **`<skipDefaultInterface>`**: If `true`, skips generating default implementations for interfaces.
+** **`<useSpringBoot3>`**: If `true`, enables compatibility with Spring Boot 3.
+** **`<useOptional>`**: If `true`, uses `Optional` for nullable fields.
+** **`<useBeanValidation>`**: If `true`, adds Bean Validation annotations (e.g., `@NotNull`, `@Size`) to models.
+** **`<dateLibrary>`**: Specifies the date library to use. Example: `java-time` for Java 8+ date/time API.
+** **`<generateBuilders>`**: If `false`, skips generating builder methods for models.
+** **`<generateConstructorWithAllArgs>`**: If `true`, generates constructors with all arguments for models.
+** **`<additionalModelTypeAnnotations>`**: Adds custom annotations to generated model classes. Example: `@lombok.Generated` and `@lombok.ToString`.
+** **`<documentationProvider>`**: Specifies the source of documentation. Example: `source` uses the OpenAPI spec as the source.
+** **`<annotationLibrary>`**: Specifies the annotation library to use. Example: `swagger2` for Swagger 2 annotations.
+
+For a detailed description of the configuration parameters for the `openapi-generator-maven-plugin`, refer to the link:https://github.com/OpenAPITools/openapi-generator/tree/master/modules/openapi-generator-maven-plugin[official documentation].
+
+=== Generating the Services Layer Code
+
+To generate the code, run the following Maven command in the terminal:
+
+[source,shell]
+----
+mvn clean compile -DskipTests
+----
+
+This will generate the services layer code based on the OpenAPI specification and place it in the specified output directory.
+
+After running the plugin, verify that the generated code is available in the `target/generated-sources/openapi` directory. You can now integrate this code into your project and implement the required service layer.
+
+=== Provide the mappers
+
+The generated classes for representing the API models differ from the Eto and Cto classes provided by the business logic layer. To convert between these two representations, we need to implement mappers that will handle the conversion between the API models and the business logic layer models.
+
+To simplify the implementation, we provide the mappers. Please coppy following files to the `com.capgemini.training.appointmentbooking.service.mapper` package.
+
+- link:assets/service/AppointmentApiMapper.java[AppointmentApiMapper.java]
+- link:assets/service/TreatmentApiMapper.java[TreatmentApiMapper.java]
+
+Copy also the configuration class link:assets/service/ServiceMappingConfiguration.java[ServiceMappingConfiguration.java] into the `com.capgemini.training.appointmentbooking.service.config` package.
+
+== Implementing the Services
+
+The generated code contains the interfaces for the services layer. We need to implement these interfaces to provide the actual functionality of the services. 
+
+To be familiar with the generated code, open the `com.capgemini.training.appointmentbooking.service.api` package and check the generated classes (keep in mind, the generated classes can be found under `target/generated-sources/openapi`). You will find the following classes:
+
+- `TreatmentApi.java`: This interface defines the API for managing treatments.
+- `AppointmentApi.java`: This interface defines the API for managing appointments.
+
+
+Pleas try to complete the implementation of at least one of the APIs. If you have more time you can implement the second API as well.
+
+=== Implementing the TreatmentApi
+
+Implement the class `TreatmentsApiController` under the `com.capgemini.training.appointmentbooking.service.impl` package (under `src/main/`). This class should implement the `TreatmentApi` interface and provide the actual functionality for managing treatments.
+
+[source,java]
+----
+@RestController
+@RequestMapping("/")
+@RequiredArgsConstructor
+public class TreatmentsApiController implements TreatmentsApi {
+
+	private final FindTreatmentUc findTreatmentUc;
+	private final ManageTreatmentUc manageTreatmentUc;
+	private final TreatmentApiMapper treatmentMapper;
+
+	@Override
+	public ResponseEntity<Treatment> createTreatment(@Valid TreatmentRequest treatmentRequest) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	@Override
+	public ResponseEntity<TreatmentDetails> getTreatmentDetails(String treatmentId) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	@Override
+	public ResponseEntity<List<Treatment>> getTreatments() {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+}
+----
+
+Implement each method in the `TreatmentsApiController` class to handle the corresponding API requests. Use the `FindTreatmentUc` and `ManageTreatmentUc` use cases to perform the necessary operations. Use the `TreatmentApiMapper` to convert between the API models and the business logic layer models.
+
+Return appropriate HTTP responses based on the results of the operations. For example, if a treatment is successfully created, return a `201 Created` response with the created treatment details. 
+
+[source,java]
+----
+return ResponseEntity.status(HttpStatus.CREATED).body(treatmentMapper.toApiTreatment(created));
+----
+
+If a treatment is not found, return a `404 Not Found` response.
+If an error occurs during the operation, return a `500 Internal Server Error` response with an appropriate error message. Refer the Openapi specification to ensure the metyhods return the correct HTTP status codes and response formats.
+
+You can also check the generated inferfaces for the `AppointmentApi` and `TreatmentApi` to see the expected request and response formats.
+
+While implementing the controllers, you need to test the services layer to ensure that the implementation is correct. 
+
+- You can use the `MockMvc` framework to test the controllers. Please refer to the link:#implementing-the-tests[Implementing the Tesst] section for more details on how to implement the test cases for the services layer.
+- You can use Swagger to test the API endpoints. Swagger provides a user interface that allows you to test the API endpoints directly from the browser. Please refer link:#testing-the-services-layer[Testing the Services Layer]  for more details on how to test the services layer.
+
+
+While implementing the services, you can use the `@Valid` annotation to validate the incoming request parameters. This will ensure that the request data is valid before processing it. You can also use the `@NotNull` and `@DateTimeFormat` annotations to specify additional validation constraints on the request parameters. The @Validated annotation, which enables the validation on the class, has already been added by the generator to the generated api interfaces.
+
+
+
+== Implementing the AppointmentApi
+
+Implement the class `AppointmentsApiController` under the `com.capgemini.training.appointmentbooking.service.impl` package. This class should implement the `AppointmentApi` interface and provide the actual functionality for managing appointments.
+
+[source,java]
+----
+@RestController
+@RequestMapping("/")
+@RequiredArgsConstructor
+public class AppointmentsApiController implements AppointmentsApi {
+
+	private final FindAppointmentUc findAppointmentUc;
+	private final ManageAppointmentUc manageAppointmentUc;
+	private final AppointmentApiMapper appointmentMapper;
+
+	@Override
+	public ResponseEntity<Appointment> createAppointment(@Valid AppointmentRequest appointmentRequest) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	@Override
+	public ResponseEntity<List<Appointment>> getAppointments(@Valid Optional<String> clientId,
+			@Valid Optional<String> specialistId, @Valid Optional<String> status) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	@Override
+	public ResponseEntity<Void> updateAppointmentStatus(String appointmentId,
+			@Valid AppointmentStatusUpdate appointmentStatusUpdate) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+
+	@Override
+	public ResponseEntity<CheckAvailability200Response> checkAvailability(@NotNull @Valid String specialistId,
+			@NotNull @Valid @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date dateTime) {
+		return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();
+	}
+}
+----
+
+Implement each method in the `AppointmentsApiController` class to handle the corresponding API requests. Use the `FindAppointmentUc` and `ManageAppointmentUc` use cases to perform the necessary operations. Use the `AppointmentApiMapper` to convert between the API models and the business logic layer models.
+Return appropriate HTTP responses based on the results of the operations. For example, if an appointment is successfully created, return a `201 Created` response with the created appointment details.
+
+
+== Enable validation (optional)
+
+Usually the validation of the parameters should be performed on the service layer to prevent requests which are not valid. 
+
+In this task you can add input validation to your services. Utilize annotations like `@Validated` in your service class and `@Valid` and `@NotNull` in your service methods to enforce constraints on incoming data.
+
+Please follow _Bean validation using Hibernate Validator_ in link:appointment-booking-service-business-logic-layer.asciidoc#optional-bean-validation-using-hibernate-validator[Appointment Booking System - Business Logic Layer] for more details. 
+
+If you need to add more validation constraints to the requesst you need to update the OpenAPI specification and regenerate the code. Please refer the Openapi documentation for more details.
+
+
+== Testing the Services Layer
+
+You can use Swagger to test the API endpoints. Swagger provides a user interface that allows you to test the API endpoints directly from the browser. You can access the Swagger UI at `http://localhost:8080/swagger-ui/index.html` after starting the application. The Swagger UI provides a user-friendly interface to test the API endpoints and view the request and response formats.
+
+image::images/service/swagger-ui-1.png[][Swagger UI]
+
+Select the API endpoint you want to test. The UI will display the details of the selected endpoint, including the request parameters and response formats. 
+
+image::images/service/swagger-ui-2.png[][Swagger UI]
+
+Click Try it out button to expand the request parameters. Fill in the required parameters and click Execute button to send the request. The UI will display the response from the server, including the status code and response body. 
+
+image::images/service/swagger-ui-4.png[][Swagger UI]
+
+== Implementing the tests
+
+You can use the `MockMvc` framework to test the controllers. MockMvc allows you to perform HTTP requests and verify the responses without starting a full server. This makes it easy to test your controllers in isolation.
+MockMvc is a part of the Spring Test framework and provides a fluent API for testing Spring MVC controllers.
+
+=== Implement the tests for the TreatmentApi
+
+Implement the class `TreatmentsApiControllerTest` under the `com.capgemini.training.appointmentbooking.service.impl` package (under `src/test/`). This class should test the `TreatmentsApiController` class.
+
+[source,java]
+----
+@WebMvcTest(controllers = TreatmentsApiController.class)
+@Import(ServiceMappingConfiguration.class)
+public class TreatmentsApiControllerTest extends BaseTest {
+	@Autowired
+	private MockMvc mockMvc;
+
+	@MockitoBean
+	private FindTreatmentUc findTreatmentUc;
+
+	@MockitoBean
+	private ManageTreatmentUc manageTreatmentUc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Test
+	void shouldCreateTreatmentAndReturn201() throws Exception {
+        // implement
+    }
+
+}
+----
+
+Implement the test cases for each API endpoint in the `TreatmentsApiControllerTest` class. Use the `MockMvc` framework to perform HTTP requests and verify the responses. Use the `@WebMvcTest` annotation to load the `TreatmentsApiController` class and its dependencies.
+Use the `@Import` annotation to import the `ServiceMappingConfiguration` class, which contains the mappers for converting between the API models and the business logic layer models.
+
+Use the `@MockitoBean` annotation to create mock instances of the `FindTreatmentUc` and `ManageTreatmentUc` use cases. This allows you to test the controller in isolation without relying on the actual implementations of the use cases.
+
+[source,java]
+----
+@Test
+void shouldCreateTreatmentAndReturn201() throws Exception {
+    // given
+    String name = "Test name";
+    int duration = 30;
+    Long specialistId = 101L;
+
+    TreatmentRequest request = createTreatmentRequest(name, duration, specialistId);
+    TreatmentCto treatmentCto = createTreatmentCto(1L, name, duration, specialistId, Specialization.DENTIST);
+
+    when(manageTreatmentUc.createTreatment(any())).thenReturn(treatmentCto);
+
+    // when / then
+    mockMvc.perform(post("/api/v1/treatments").contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(request))).andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name", is(name))).andExpect(jsonPath("$.duration", is(duration)))
+            .andExpect(jsonPath("$.specialistId").value(specialistId));
+}
+----
+
+
+Please try to test some of the positive and negative scenarios. For example, you can test the following scenarios:
+
+- Creating a treatment with valid parameters and verifying that the response status is `201 Created`.
+- Creating a treatment with invalid parameters and verifying that the response status is `400 Bad Request`.
+- Retrieving a treatment by ID and verifying that the response status is `200 OK`.
+- Retrieving a treatment by ID that does not exist and verifying that the response status is `404 Not Found`.
+- and more...
+- You can also test the error handling of the API by simulating exceptions thrown by the use cases and verifying that the response status is `500 Internal Server Error`.
+
+Analyze the API interfaces to understand the expected request and response formats. Use the `ObjectMapper` to serialize and deserialize JSON objects in your test cases.
+
+=== Implement the tests for the AppointmentApi
+
+Implement the class `AppointmentsApiControllerTest` under the `com.capgemini.training.appointmentbooking.service.impl` package (under `src/test/`). This class should test the `AppointmentsApiController` class.
+
+[source,java]
+----
+@WebMvcTest(controllers = AppointmentsApiController.class)
+@Import(ServiceMappingConfiguration.class)
+public class AppointmentsApiControllerTest extends BaseTest {
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	@MockitoBean
+	private FindAppointmentUc findAppointmentUc;
+
+	@MockitoBean
+	private ManageAppointmentUc manageAppointmentUc;
+
+	@Autowired
+	private ObjectMapper objectMapper;
+
+	@Test
+	void shouldCreateAppointmentAndReturn201() throws Exception {
+        // implement
+    }
+
+}
+----
+
+Try to test some of the positive and negative scenarios. For example, you can test the following scenarios:
+
+- Creating an appointment with valid parameters and verifying that the response status is `201 Created`.
+- Creating an appointment with invalid parameters and verifying that the response status is `400 Bad Request`.
+- Retrieving appointments with valid parameters and verifying that the response status is `200 OK`.
+- Updating an appointment status with valid parameters and verifying that the response status is `200 OK`.
+- Updating an appointment status with invalid parameters and verifying that the response status is `400 Bad Request`.
+- ...
+
+Analyze the API interfaces to understand the expected request and response formats. 
+
+== Additional Tips
+
+=== Creating JSON Strings from Java Classes
+
+When writing your test cases, you might need to send JSON payloads. Use Jackson's `ObjectMapper` to serialize Java objects into JSON strings:
+
+[source,java]
+----
+ObjectMapper objectMapper = new ObjectMapper();
+
+TreatmentRequest request = new TreatmentRequest();
+request.setName(Optional.of(name));
+request.setDuration(Optional.of(duration));
+request.setSpecialistId(Optional.of(specialistId));
+
+
+mockMvc.perform(post("/api/v1/treatments").contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(request))).andExpect(status().isCreated());
+----
+
+=== Handling Java 8 Date/Time Serialization
+
+If you encounter `InvalidDefinitionException` with Java 8 date/time types, like `java.time.Instant`, you can fix this by registering the `JavaTimeModule` with your `ObjectMapper`:
+
+[source,java]
+----
+ObjectMapper objectMapper = new ObjectMapper();
+objectMapper.registerModule(new JavaTimeModule());
+----
+
+This allows your `ObjectMapper` to correctly serialize and deserialize Java 8 date/time types.
 
 == Navigation
 [grid=cols]
 |===
-| <= link:appointment-booking-service-logic-layer.asciidoc[Previous Chapter: Appointment Booking System - Logic Layer] | link:appointment-booking-service-security.asciidoc[Next Chapter: Appointment Booking System - Security] =>
+| <= link:appointment-booking-service-business-logic-layer.asciidoc[Previous Chapter: Appointment Booking System - Logic Layer] | link:appointment-booking-service-security.asciidoc[Next Chapter: Appointment Booking System - Security] =>
 |===

@@ -17,42 +17,34 @@ Let's create a Spring Boot application using the Spring Initializer. Follow thes
 . Go to the Spring Initializer website: link:https://start.spring.io[https://start.spring.io].
 . Fill out the form with the following details:
 +
---
-- *Project*: Maven Project
-- *Language*: Java
-- *Spring Boot*: 3.3.4
-- *Group*: `com.capgemini.training`
-- *Artifact*: `appointment_booking_app`
-- *Package name*: `com.capgemini.training.appointment_booking_app`
-- *Packaging*: Jar
-- *Java*: Select the version corresponding to your JDK installation (`21`)
---
+*Project*: Maven Project +
+*Language*: Java +
+*Spring Boot*: 3.4.4 +
+*Group*: `com.capgemini.training` +
+*Artifact*: `appointment-booking-app` +
+*Description*: `Java Backend Developer Training` +
+*Package name*: `com.capgemini.training.appointment-booking-app` +
+*Packaging*: Jar +
+*Java*: Select the version corresponding to your JDK installation (`21`)
 . Under *Dependencies*, add the following:
 +
---
-- Spring Web
-- Lombok
-- H2 Database
-- Spring Data JPA
-- Spring Boot Actuator
-- Flyway Migration
---
+Spring Web, Lombok, H2 Database, Spring Data JPA, Spring Boot Actuator, Flyway Migration
 . Once all information is filled in, click on the *Generate* button to download your project.
-
 Here is how your Spring Initializer should look like with the chosen options:
-
-image::images/setup/spring-initializer-todo.png[Spring Initializer]
-
-. Unzip the downloaded project in a convenient location on your system, like `C:\trainings\java-backend-developer`.
-. Open terminal, go to the location where you have extracted the sample application and build it using maven
 +
---
+image::images/setup/spring-initializer-todo.png[Spring Initializer]
+. Unzip the downloaded project in a convenient location on your system, like `C:\trainings\java-backend-developer`.
+. Open terminal, go to the location where you have extracted the sample application and build it using Maven:
++
 [source,bash]
---------
+----
 mvn clean package
---------
---
-. Open the project in your preferred IDE.
+----
+. Open the project in your preferred IDE. In IntelliJ you can open project this way:
++
+open IntelliJ and click the buttons shown below:
++
+image::images/setup/open-in-intellij.png[Open in IntelliJ]
 . Explore the project structure. You'll notice that Spring Initializer has created a basic project setup with the selected dependencies included in the `pom.xml` file.
 
 == Configuring the application

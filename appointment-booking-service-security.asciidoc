@@ -1,10 +1,297 @@
+= Appointment Booking System - Security
 :toc: macro
 :sectnums:
 :sectnumlevels: 3
 
-= Appointment Booking System - Security
+This document provides a step-by-step guide to securing the Appointment Booking System using Spring Security. It outlines how to implement authentication and authorization based on user roles and provides hands-on exercises to help understand the framework's capabilities. Please note that many of the configurations are tailored to practicing Spring Security and use mostly simple examples. In real-world scenarios, we often use other approaches such as OAuth2, storing sessions in Redis, or not maintaining sessions at all (authorization is performed with every request), etc. Most of these cases should have been discussed in the presentation. In any case, feel free to ask.
 
-TODO
+We will protect our booking system to ensure it is accessible only by the clinic staff.
+
+NOTE: You can test and observe the progress of your implementation at any time using the provided UI or Swagger UI.
+
+toc::[]
+
+== Incorporating Dependencies
+
+To enable Spring Security, it first needs to be added to the project. To add this module, please include the following dependencies in your `pom.xml`:
+
+[source,xml]
+----
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+
+<dependency>
+  <groupId>org.springframework.security</groupId>
+  <artifactId>spring-security-test</artifactId>
+</dependency>
+----
+
+This is sufficient to observe Security in action, configured by Spring Boot’s auto-configuration mechanism. Accessing any secured endpoint will redirect to a login screen. A default user (`user`) and an auto-generated password will be printed in the console. If issues arise, refresh the Maven model.
+
+== Configuring Authentication
+
+=== Security Configuration Class
+
+Now it is time to configure security the way we want — not the default way Spring Boot does it. In recent Spring versions, configuration is handled similarly to any other aspect of the application. We need to create instances of the following base Spring Security classes: `SecurityFilterChain`, `UserDetailsService`, `AuthenticationManager`, `Filter`, etc.
+
+Create a configuration class named `SecurityConfiguration` to define security-related beans.
+
+=== Security Filter Chain
+
+Define a `SecurityFilterChain` bean with the following:
+
+* Require authentication for all endpoints under `/api/**`.
+* Allow anonymous access to other endpoints.
+* Enable the default login page at `/login`.
+* Enable logout via `/logout`.
+* Enable HTTP Basic Authentication for Swagger/Postman.
+* Disable CSRF (for the H2 Console and testing purposes).
+* Allow frames for the H2 Console.
+
+[source,java]
+----
+.csrf(AbstractHttpConfigurer::disable)
+.headers(headers -> headers.frameOptions().sameOrigin())
+----
+
+=== In-Memory UserDetailsService
+
+Implement a `UserDetailsService` that:
+
+* Stores user data in memory.
+* Configures a sample user and credentials.
+
+Here is a template of the file to be created and implemented:
+
+[source,java]
+----
+@Configuration
+public class SecurityConfiguration {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        // Implement security configuration here
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService() {
+        // Implement user details setup here
+    }
+}
+----
+
+=== Adding Auth Information Endpoint
+
+The frontend part of the application is prepared to detect the logged-in user and roles to dynamically adjust the displayed content. 
+
+Implement a REST endpoint `auth/me` to return the current user's username and roles, as shown below:
+
+[source,json]
+----
+{
+  "username": "admin",
+  "roles": [
+    "ROLE_ADMIN",
+    "ROLE_SPECIALIST"
+  ]
+}
+----
+
+Return HTTP 401 if the user is not authenticated.
+
+TIP: Use `@AuthenticationPrincipal` to access the current user:
+
+[source,java]
+----
+@GetMapping("/auth/me")
+public ResponseEntity<?> me(@AuthenticationPrincipal UserDetails userDetails) {
+    // Return auth info or 401
+}
+----
+
+=== Test Your Configuration
+
+At this point, most of the authentication work should be complete and ready to test.
+
+Ensure that:
+
+* Unauthorized access redirects to the login page.
+* Users can authenticate using the login form or Basic Auth.
+
+== Configuring Authorization
+
+Now it is time to define who may perform what actions in our system. Let’s focus on authorization. As is often the case with Spring, this can be achieved in multiple ways — e.g., with custom filters, configuration in the `SecurityFilterChain`, or using annotations. We'll focus on the last option as it enables powerful, reusable features.
+
+Enable method-level security by adding the `@EnableMethodSecurity` annotation to your security configuration class.
+
+=== User Roles
+
+To test different scenarios, update the code to incorporate more users with roles as shown below:
+
+[cols="1,2",options="header"]
+|===
+| Username | Roles
+| admin | ADMIN, SPECIALIST, RECEPTIONIST
+| specialist | SPECIALIST, RECEPTIONIST
+| receptionist | RECEPTIONIST
+| user | (no roles)
+|===
+
+=== Apply Annotations
+
+Place security annotations at the *service* layer for this training. Annotations can also be applied to controllers, but each approach has its trade-offs depending on context. Start with the Standard Approach, then continue with the Improved Approach.
+
+[cols="1,2",options="header"]
+|===
+| Role | Access
+| ADMIN | Can create treatments
+| specialist | Can change appointment status
+| receptionist | Can list, check for conflict, and book appointments
+| (everyone) | Can view treatments
+|===
+
+==== Standard Approach
+
+Use the `@PreAuthorize` annotation to control access to methods. Examples below:
+
+[source,java]
+----
+@Component
+public class AccessControl {
+    public static final String ROLE_ADMIN = "ADMIN";
+    public static final String IS_ADMIN = "hasRole('ADMIN')";
+}
+
+@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize(AccessControl.IS_ADMIN)
+@PreAuthorize("hasRole(@accessControl.ROLE_ADMIN)") // 'accessControl' is the bean name here
+@PreAuthorize("hasRole(T(com.example.security.AccessControl).ROLE_ADMIN)") // Fully qualified name required
+----
+
+There are also (less recommended) alternatives for simple scenarios:
+
+[source,java]
+----
+@Secured(AccessControl.ROLE_ADMIN)
+@RolesAllowed("ROLE_ADMIN")
+----
+
+These require explicit enabling (via `@EnableMethodSecurity`) and are generally discouraged for new projects.
+
+==== Improved Approach
+
+The above examples have a disadvantage — they require hardcoded strings. This can be fragile and hard to maintain. Instead, leverage Spring and Java features to create custom annotations.
+
+===== Meta-Annotations
+
+Improve readability using custom annotations:
+
+[source,java]
+----
+@Target({ ElementType.METHOD, ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+@PreAuthorize("hasRole('ADMIN')")
+public @interface IsAdmin {}
+
+@IsAdmin
+----
+
+===== Template-Based Role Annotation
+
+Create a parameterized version of a custom annotation. First, enable it with a Spring bean:
+
+[source,java]
+----
+@Bean
+static AnnotationTemplateExpressionDefaults templateExpressionDefaults() {
+    return new AnnotationTemplateExpressionDefaults();
+}
+----
+
+Then define the annotation:
+
+[source,java]
+----
+@Target({ ElementType.METHOD, ElementType.TYPE })
+@Retention(RetentionPolicy.RUNTIME)
+@PreAuthorize("hasRole('{value}')")
+public @interface HasRole {
+    String value();
+}
+
+// Usage:
+@HasRole(AccessControl.ROLE_ADMIN)
+----
+
+==== Verify Access
+
+* Test restricted endpoints with both authorized and unauthorized users.
+* Ensure proper access control behavior based on roles and endpoints.
+
+== Fixing Service Tests
+
+// TODO: Add this section after all tests have been implemented
+
+== Bonus - Additional Tasks
+
+=== Role Hierarchy
+
+Currently, users who need full functionality (e.g., admin) must be assigned all roles. Typically, this is not ideal. If a user has the ADMIN role, they should automatically inherit permissions of SPECIALIST and RECEPTIONIST.
+
+You can define this hierarchy in one of the following ways:
+
+==== RoleHierarchy Bean
+
+Define a `RoleHierarchy` bean and tell Spring to use it:
+
+[source,java]
+----
+@Bean
+static RoleHierarchy roleHierarchy() {
+    // Define role hierarchy
+}
+
+@Bean
+static MethodSecurityExpressionHandler methodSecurityExpressionHandler(RoleHierarchy roleHierarchy) {
+    DefaultMethodSecurityExpressionHandler handler = new DefaultMethodSecurityExpressionHandler();
+    handler.setRoleHierarchy(roleHierarchy);
+    return handler;
+}
+----
+
+==== Custom Implementation
+
+Alternatively, implement custom logic in `UserDetailsService` to assign proper authorities based on a defined role hierarchy.
+
+=== Storing Users in a Database
+
+Until now, user data has been stored in memory. Now, store user data in a database. Adjust relevant components to retrieve data during authentication.
+
+Steps:
+
+* Create a migration script with all required fields.
+** Use the existing `User` table.
+** Manage role associations properly.
+* Update logic to retrieve users. You can use:
+** `JdbcUserDetailsManager` — define SQL statements.
+** A custom `UserDetailsService` — using Spring Repositories or other approaches.
+* Ensure login works immediately after a user is added — no application restart needed.
+
+TIP: See the default schema in: `org/springframework/security/core/userdetails/jdbc/users.ddl`
+
+=== Fine-Grained Authorization
+
+To improve flexibility, enable fine-grained authorization, allowing specific actions to be assigned to roles.
+
+* Define authorities like:
+** `CREATE_APPOINTMENT`
+** `CREATE_TREATMENT`
+* Assign authorities to roles and update authentication logic accordingly (database, hierarchy, custom logic).
+* Update authorization annotations as needed.
+
+Users should end up with both roles and authorities. For example, if ADMIN includes `CREATE_TREATMENT`, then the user's authorities list should include: `ROLE_ADMIN`, `CREATE_TREATMENT`
 
 == Navigation
 [grid=cols]

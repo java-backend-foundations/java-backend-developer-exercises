@@ -31,7 +31,7 @@ image::images/dataaccess/dataaccess_entities_uml.png[width="1000", link="images/
 
 Each of the entities will have an id generated with a sequence, version which specifies version number of the entity, created and lastUpdated Instant fields, which will inform, when the entity was created and last changed.
 
-The _UserEntity_ will be defined by email, passwordHash, firstname and lastname. The email will always be unique.
+The _UserEntity_ will be defined by email, passwordHash, firstName and lastName. The email will always be unique.
 
 The _ClientEntity_ will have a _UserEntity_, which it's connected to. It will also have a collection of appointments (_AppointmentEntities_).
 
@@ -206,6 +206,7 @@ The table should contain following columns:
 - CREATED: informs, when the entity was first created and saved. Default: current point in time
 - LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
 * DATE_TIME: the scheduled date and time for the appointment.
+* END_DATE_TIME: end timestamp of appointment
 * STATUS: the current status of the appointment (default value: `SCHEDULED`), which can be:
 ** `SCHEDULED`: Appointment is booked but not yet completed.
 ** `CANCELLED`: Appointment has been canceled.
@@ -235,6 +236,10 @@ The sequence will start with 1, and each call for next_val will return the value
 Nocycle means, the sequence will not start all over again when it reaches the max value.
 
 Now create the sequences for all your entities basing off of the sequence for user.
+
+==== CONSTRAINT CHECKS
+
+END_DATE_TIME > DATE_TIME. How would you ensure this using Check Constraint?
 
 ==== INDEXES
 
@@ -296,26 +301,26 @@ INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALI
 INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-12, 0, 'Rekonstrukcja więzadła ACL', 'Rekonstrukcją więzadła krzyżowego przedniego (ACL) z zastąpieniem uszkodzonego więzadła nowym więzadłem ze ścięgien pacjenta.', 180, -4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- APPOINTMENTS
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-1, 0, -1, -1, '2024-03-01 09:00:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-2, 0, -2, -3, '2024-03-02 10:30:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-3, 0, -3, -5, '2024-03-03 14:00:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-4, 0, -4, -10, '2024-03-04 08:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-5, 0, -1, -2, '2024-03-05 11:45:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-6, 0, -2, -4, '2024-03-06 16:30:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-7, 0, -3, -6, '2024-03-07 09:30:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-8, 0, -4, -11, '2024-03-08 13:45:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-9, 0, -1, -7, '2024-03-09 10:00:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-10, 0, -2, -8, '2024-03-10 12:30:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-11, 0, -3, -9, '2024-03-11 15:00:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-12, 0, -4, -12, '2024-03-12 17:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-13, 0, -1, -1, '2024-03-13 08:30:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-14, 0, -2, -3, '2024-03-14 11:00:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-15, 0, -3, -5, '2024-03-15 13:00:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-16, 0, -4, -10, '2024-03-16 09:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-17, 0, -1, -2, '2024-03-17 14:45:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-18, 0, -2, -4, '2024-03-18 16:00:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-19, 0, -3, -6, '2024-03-19 10:45:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-20, 0, -4, -11, '2024-03-20 12:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-1, 0, -1, -1,  '2024-03-01 09:00:00', '2024-03-01 09:15:00',  'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-2, 0, -2, -3,  '2024-03-02 10:30:00', '2024-03-02 10:45:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-3, 0, -3, -5,  '2024-03-03 14:00:00', '2024-03-03 14:15:00',  'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-4, 0, -4, -10, '2024-03-04 08:15:00', '2024-03-04 08:30:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-5, 0, -1, -2,  '2024-03-05 11:45:00', '2024-03-05 12:00:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-6, 0, -2, -4,  '2024-03-06 16:30:00', '2024-03-06 16:45:00',  'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-7, 0, -3, -6,  '2024-03-07 09:30:00', '2024-03-07 09:45:00',  'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-8, 0, -4, -11, '2024-03-08 13:45:00', '2024-03-08 14:00:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-9, 0, -1, -7,  '2024-03-09 10:00:00', '2024-03-09 10:15:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-10, 0, -2, -8, '2024-03-10 12:30:00', '2024-03-10 12:45:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-11, 0, -3, -9, '2024-03-11 15:00:00', '2024-03-11 15:15:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-12, 0, -4, -12,'2024-03-12 17:15:00', '2024-03-12 17:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-13, 0, -1, -1, '2024-03-13 08:30:00', '2024-03-13 08:45:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-14, 0, -2, -3, '2024-03-14 11:00:00', '2024-03-14 11:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-15, 0, -3, -5, '2024-03-15 13:00:00', '2024-03-15 13:15:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-16, 0, -4, -10,'2024-03-16 09:15:00', '2024-03-16 09:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-17, 0, -1, -2, '2024-03-17 14:45:00', '2024-03-17 15:00:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-18, 0, -2, -4, '2024-03-18 16:00:00', '2024-03-18 16:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-19, 0, -3, -6, '2024-03-19 10:45:00', '2024-03-19 11:00:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-20, 0, -4, -11,'2024-03-20 12:15:00', '2024-03-20 12:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 ----
 
 You can provide your own data or use the script above.
@@ -330,7 +335,7 @@ If you don't have the lombok dependency yet, add it to the pom.xml:
 <dependency>
 	<groupId>org.projectlombok</groupId>
 	<artifactId>lombok</artifactId>
-	<optional>true</optional>
+	<scope>provided</scope>
 </dependency>
 ----
 
@@ -353,6 +358,7 @@ You can create _dataaccess.converter_ and _common.datatype_ as well, since we wi
 
 Notice, that attributes _version_, _lastUpdated_ and _created_ are repeated in every entity. To make the structure cleaner and avoid duplicated code, let's extract a @MappedSuperclass, that each of our entities will extend.
 Create a new class in package _com.capgemini.training.appointmentbooking.dataaccess.entity_:
+[source,java]
 ----
 @MappedSuperclass
 @Getter
@@ -376,6 +382,7 @@ It has three attributes:
 * _version_ - describing the version of the entity for optimistic locking. Only attribute with a setter
 * _created_ and _lastUpdated_ attributes. Notice, they don't have the setters - the direct access to there attributes is not allowed. We will set them in our lifecycle listeners.
 Add a listener with *@PrePersist*:
+[source,java]
 ----
 
 	@PrePersist
@@ -399,7 +406,7 @@ Create a new class _UserEntity_ in the same package.
 Mark the class with `@Entity` and `@Table` annotations, specifying the table name. Let the class extend our @MappedSuperclass _BaseEntity_ to inherit the attributes _version_, _created_ and _lastUpdated_. 
 Additionally, mark the class with `@Getters` and `@Setters` annotations from lombok - this will allow a getter and setter generation "in the background", without adding them in the class.
 
-Define private attributes based on the schema (_id, email, passwordHash, firstname, lastname_).
+Define private attributes based on the schema (_id, email, passwordHash, firstName, lastName_).
 
 Now, lets configure the _id_ attribute.
 
@@ -536,7 +543,6 @@ public class SpecializationConverter implements AttributeConverter<Specializatio
 	public String convertToDatabaseColumn(Specialization specialization) {
 		
 		return specialization != null ? specialization.getName() : null;
-		
 	}
 
     @Override
@@ -634,10 +640,10 @@ This means we only define the relationship in AppointmentEntity, making it a one
 Add a private attribute of type TreatmentEntity in AppointmentEntity.
 Mark it with @ManyToOne annotation. Define fetch type as lazy.
 
-==== EntitySmokeTest
+==== EntitySmokeIT
 
 Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.  
-Create a new test class named _EntitySmokeTest_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest` to configure JPA-related components.
+Create a new test class named _EntitySmokeIT_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest(bootstrapMode = BootstrapMode.LAZY)` to configure JPA-related components.
 
 Inside the class, inject an instance of `EntityManager` using `@PersistenceContext`.
 
@@ -674,10 +680,470 @@ You are ready to go!
 
 === Repositories
 
-TODO Repositories
+To perform operations on our entities we need to create repositories for each of them. They will contain operations specific for each of the objects.
+Repositories used in Spring are already defined as Interface called _Repository_. There are multiple extensions of this interface and we will use _JpaRepository<ENTITY, ID>_.
+
+==== Create custom repository infrastructure
+In complex projects, it is recommended to consider creating a custom repository interface.
+Advanced use cases often require the use of sophisticated mechanisms provided by the EntityManager. For this reason, we will create our own repository interface.
+
+===== Custom repository interface
+Create custom _JpaRepository_ interface that will enable access to _EntityManager_
+
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.repository;
+
+@NoRepositoryBean
+public interface BaseJpaRepository<T, ID> extends JpaRepository<T, ID> {
+    EntityManager getEntityManager();
+}
+----
+
+===== Custom repository implementation
+Create custom repository implementation
+
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.repository.impl;
+
+public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> implements BaseJpaRepository<T, ID> {
+
+    private final EntityManager entityManager;
+
+    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation, EntityManager entityManager) {
+        super(entityInformation, entityManager);
+        this.entityManager = entityManager;
+    }
+
+    @Override
+    public EntityManager getEntityManager() {
+        return this.entityManager;
+    }
+
+}
+----
+
+===== Configure Spring to use custom repositories
+Now we need to configure Spring to use our custom repository
+[source,java]
+----
+package com.capgemini.training.appointmentbooking.dataaccess.config;
+
+@Configuration
+@EnableJpaRepositories(
+    repositoryBaseClass = BaseJpaRepositoryImpl.class,
+    basePackages = "com.capgemini.training.appointmentbooking.dataaccess.repository")
+public class DataaccessConfiguration {}
+----
+
+==== AppointmentRepository
+
+In the component appointmentbooking, create package dataaccess.repository. We will place there all our repositories.
+
+Create interface _AppointmentRepository_. It should extend _JpaRepository_ from Spring which contains all basic operations along with methods used in sorting and paging of results. This Interface is generic.
+[source,java]
+----
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
+    // Add imports and that's it
+}
+----
+
+==== Create basic dataaccess layer integration tests infrastructure
+First we will create a _BaseTest_ that will enable AssertJ assertions.
+
+[source, java]
+----
+package com.capgemini.training.appointmentbooking.common;
+
+public class BaseTest implements WithAssertions {
+
+    protected Instant toInstant(String date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return LocalDateTime.parse(date, formatter).atZone(ZoneId.systemDefault()).toInstant();
+    }
+}
+----
+
+Then we create a base class for dataaccess layer integration test.
+
+[source, java]
+----
+package com.capgemini.training.appointmentbooking.common;
+
+@DataJpaTest
+@Import(DataaccessConfiguration.class)
+public class BaseDataJpaTest extends BaseTest{
+}
+----
+
+The _BaseDataJpaTest_ enables
+
+* Persistance integration testing via _@DataJpaTest_ annotation
+* Support for transaction (and automatic rollback) (inherited from _@DataJpaTest_ annotation)
+* Usage of our custom repository implementation via _@Import_ annotation
+
+@DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
+All of the tests on @DataJpaTest will be launched on preconfigured H2 Database, so there's no configuration needed.
+Remember, that by default all @Test methods in a @DataJpaTest annotated test class will be automatically rolled back and not commited.
+This actually may cause some of your database-specific constraints to not be actually checked, only your Entity annotations
+- and that's a plus, because the tests are much faster, and you should add constraints to BOTH db and Entities.
+Just like you should do frontend AND backend validation.
+
+
+
+==== AppointmentRepositoryIT
+
+With a standard repository we can already perform basic CRUD operations, f.e. save, deleteById, findById.
+
+We can test the behaviour of Repository methods using unit tests. Remember that we do not test the framework itself but our usage of it. Still writing test for simple CRUD operations is usually not needed. We will write some simple tests nevertheless, just to understand the structure and behaviour of repository tests using @DataJpaTest
+
+In source folder src/test/java of project create same package as for interface.
+Alternatively, you can use IDE to generate test in corresponding package but in srt/test/java folder.
+This will enable you to test this class package protected (default visibility) methods.
+Create the class _AppointmentRepositoryTest_. Remember to add imports.
+[source,java]
+----
+public class AppointmentRepositoryIT extends BaseDataJpaTest {}
+----
+
+
+===== FindAll test
+
+Let's write our first test - we would like to find all entities.
+We will use for it findAll() method which is available in _AppointmentRepository_ thanks to inheritance of _JpaRepository_.
+Spring then creates a proxy classes of all Interfaces extending the Spring repositories, because Spring is still java,
+and you cannot have instances of interfaces.
+
+- inject _AppointmentRepository_ to test class.
+- prepare public method annotated with _@Test_
+- call there _appointmentRepository.findAll()_ method
+- check that number of found elements is same as number of elements created in your migration.
+- imports
+
+[source,java]
+----
+public class AppointmentRepositoryIT extends BaseDataJpaTest {
+
+    @Autowired
+    private AppointmentRepository appointmentRepository; //some IDE's wrongfully mark this var as unused
+
+    @Test
+    void testFindAll() {
+        //given
+        // when
+        List<AppointmentEntity> result = appointmentRepository.findAll();
+
+        //then
+        assertThat(result).isNotEmpty();
+        assertThat(result).hasSize(20);
+    }
+}
+
+----
+
+To run the tests, right click and select run tests.
+
+You should also see some hibernate queries, they may be difficult to read but it's there.
+
+[source,java]
+----
+Hibernate: select ae1_0.id,ae1_0.client_id,ae1_0.created,ae1_0.date_time,ae1_0.last_updated,ae1_0.status,ae1_0.treatment_id,ae1_0.version from appointment ae1_0
+----
+
+You can also use the mvn command:
+[source,bash]
+----
+mvn test
+----
+
+Wonderful job! You've created your first Test using Spring Repositories and _@DataJpaTest_.
+You may have also heard of _@SpringBootTest_. You can try and switch it up to see the difference.
+_@SpringBootTest_'s are slower, but also allow you to test web communication and they search for
+_@SpringBootConfiguration_ when required, allowing you to overwrite configuration for testing purposes.
+
+Regardless JPA Testing, those annotations seem same at first, but it's much easier to connect yourself to an other database,
+be it in local or in remote test environment and check if your database constraints etc. are working,
+if your triggers, scripts or whatever else is working as intended too.
+These tests use I/O intensively, so they are PAINFULLY slow and you need to maintain data stability between tests,
+so developers need to implement proper measures. On top of that, we can throw parallel test launches out of the window.
+Still, some projects use or require this approach, so it's worth noting.
+
+
+=== Querying the Database
+
+Spring Data Allows us to use a multitude of basic queries, but what if we want something customised?
+Due to the age (Java developers prefer word "Maturity") of the language and JPA itself, multitude of different libraries,
+Domain Specific Languages, frameworks etc. were introduced, to aid us or to make our lives more difficult.
+
+In the end, it doesn't even matter - it's all always mapped to JPQL Query String, and called through entityManager, the core of JPA.
+If you will debug deep enough, you will find it (try it if you're bored).
+How you will use the JPA is usually decided by an architect or the developers themselves.
+
+== Exercise No. 1
+
+Implement those 2 queries and test them. Before you dive into the code, you may want to look at examples in paragraph below.
+
+1) Find all Treatments with partially given name, ignoring upper and lowercase
+
+2) Find all Appointments for specific Specialist which took place in the past (hint: join statement is needed here)
+
+
+== Various Query Methods
+
+Courtesy of Spring: https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html
+
+Example's of queries in given forms with explanation:
+
+=== Spring Query Methods
+
+Spring Query Methods is a mechanism used solely by Spring.
+It can match the method name with corresponding table, due to Generic Type,
+and add simple clauses just by interpreting the name of the methods. It will cause wierd exceptions if this cannot be parsed, so be advised!
+
+In the _TreatmentRepository_ interface type:
+[source,java]
+----
+List<TreatmentEntity> findAllByName(String name);
+----
+That's it.
+
+==== Spring @Query Annotation
+
+Directly in the interface create a new method with a @Query annotation and JQPL query inside.
+@Param annotation is used to map the java var name of query variable
+
+[source,java]
+----
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            JOIN a.treatment t
+            WHERE t.specialist.id = :specialistId
+            AND a.dateTime < :date
+            ORDER BY a.dateTime DESC
+            """)
+    List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(@Param("specialistId") Long specialistId, @Param("date") Instant date);
+
+----
+
+==== Named Query + Named Method
+
+We can predefine a NamedQuery in the Entity class as a query with a given name and query string.
+You can use parameters there, but to use Spring mechanisms,
+the name of the query needs to start with the name of the entity.
+
+[source,java]
+----
+@NamedQuery(name = "SpecialistEntity.findBySpecialization",
+    query = "select s from SpecialistEntity s where specialization =:specialization")
+----
+
+
+Then you can create a method in interface with same name:
+
+[source,java]
+----
+List<SpecialistEntity> findBySpecialization(Specialization specialization);
+----
+
+If the name will match, then you will be able to run the named query from interface.
+
+=== Custom Queries
+
+To implement custom queries we need to have access to the _EntityManager_.
+It is very easy since we have already created a _BaseJpaRepository_.
+
+First, we need to define a class with the fields that will be used for searching.
+Create a _UserCriteria_ class in the criteria package to encapsulate search parameters.
+
+[source,java]
+----
+public record UserCriteria(String firstName, String lastName, String email) {
+}
+----
+
+Now extend your own interface repository with _BaseJpaRepository_ and implement a method.
+
+[source,java]
+----
+@Repository
+public interface UserRepository extends BaseJpaRepository<UserEntity, Long> {
+    default List<UserEntity> findByCriteria(UserCriteria criteria) {
+
+        EntityManager entityManager = getEntityManager();
+        // query the database using entityManager, criteria api or querydsl
+    }
+}
+----
+
+==== Criteria Api
+
+It allows you to build somewhat customized, more complex queries, but the amount of boilerplate code is obnoxious. The boilerplate code will require two different "creator" classes to be instantiated and mixed with each other.
+In the end the dev is forced to either build a horrific chain of subclasses to generalise some of the code, or, typically, copy-paste like the client would pay them for LoC.
+
+Here's a working sample, you can copy-paste in most of the projects using Criteria API and you're golden.
+
+In the _AppointmentRepository_ interface type:
+[source,java]
+----
+default List<AppointmentEntity> findByCriteria(AppointmentCriteria appointmentCriteria, EntityManager entityManager) {
+        Objects.requireNonNull(appointmentCriteria, "appointmentCriteria must not be null");
+
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<AppointmentEntity> cq = cb.createQuery(AppointmentEntity.class);
+        Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (c.status() != null) {
+            predicateList.add(builder.like(root.get("status"), c.status().name()));
+        }
+
+        // another predicates
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        return entityManager.createQuery(cq).getResultList();
+    }
+----
+
+
+=== Query DSL
+
+Criteria Api long lost step-brother. Everyone likes him more, he's cool. So what that (in older versions, don't know for sure now)
+he will occasionally cut parts of your query WHERE clauses and won't add them to the query String, potentially causing catastrophic reads.
+Imagine if that bad read would go to some batch processing.
+
+Still, those errors are not that often, and the API is so nice and easy, that we forgive him.
+
+To use QueryDSL along with its supportive QClasses we need to do the following:
+
+Add these 2 dependencies to the pom.xml in the _<dependencies>_ block;
+[source,xml]
+----
+		<dependency>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-apt</artifactId>
+			<version>5.0.0</version>
+			<classifier>jakarta</classifier>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.querydsl</groupId>
+			<artifactId>querydsl-jpa</artifactId>
+			<classifier>jakarta</classifier>
+			<version>5.0.0</version>
+		</dependency>
+----
+
+
+Add this plugin in the _<plugins>_ block;
+
+[source,xml]
+----
+<plugin>
+    <groupId>com.mysema.maven</groupId>
+	<artifactId>apt-maven-plugin</artifactId>
+	<version>1.1.3</version>
+	<executions>
+		<execution>
+			<goals>
+				<goal>process</goal>
+			</goals>
+			<configuration>
+				<outputDirectory>target/generated-sources/java</outputDirectory>
+				<processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
+			</configuration>
+		</execution>
+	</executions>
+</plugin>
+----
+
+Clean and install the project.
+In target.generated-sources/annotations there should be
+_QApointmentEntity_, _QBaseEntity_, _QClientEntity_, _QSpecialistEntity_, _QTreatmentEntity_, _QUserEntity_ classes.
+
+QueryDSL allows us to write us easy queries. In _ClientRepository_ we can add the method
+
+[source,java]
+----
+@Repository
+public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {
+
+    default List<ClientEntity> findByName(String firstName, String lastName, EntityManager entityManager) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+
+        QClientEntity client = QClientEntity.clientEntity;
+        QUserEntity user = QUserEntity.userEntity;
+
+        return queryFactory
+                .selectFrom(client)
+                .leftJoin(client.user, user)
+                .where(user.firstName.eq(firstName)
+                        .and(user.lastName.eq(lastName)))
+                .fetch();
+    }
+}
+----
+
+And then simply test it:
+
+[source,java]
+----
+public class TreatmentRepositoryIT extends BaseDataJpaTest  {
+
+    @Autowired
+    private ClientRepository clientRepository;
+
+    @PersistenceContext
+    private EntityManager em;
+
+    @Test
+    void testFindByQueryDSL_testFindClientsByName() {
+        // given
+        String firstName = "Stefan";
+        String lastName = "Kowalski";
+
+        // when
+        List<ClientEntity> clients = clientRepository.findByName(firstName, lastName, em);
+
+        // then
+        assertThat(clients).isNotEmpty().hasSize(1);
+        ClientEntity client = clients.getFirst();
+        assertNotNull(client.getUser(), "Expected client to have an associated user");
+        assertEquals(firstName, client.getUser().getFirstname(), "Expected client to have the specified first name");
+        assertEquals(lastName, client.getUser().getLastname(), "Expected client to have the specified last name");
+    }
+}
+----
+
+== Exercise No. 2:
+
+Implement these queries:
+
+1. Find appointments within a specified time period and having a designated status - using a Spring Query Method.
+2. Find conflicted appointments for given specialistId,  begin date and end date of appointment - using @Query.
+3. Find treatment by name - using NamedQuery and bind it to interface method.
+4. Find treatments by name and specialization - using QueryDSL.
+5. Find appointments history for given client/specialist - using criteria API.
+
+Remember to test your queries!
+
+== Hints and Troubleshooting
+
+During your implementation you may encounter multiple vague exceptions.
+JPA Exceptions look sometimes like they are wrapped or hidden, so careful console logs analysis is required.
+However, there are some exceptions that are more common than others:
+
+[source, bash]
+----
+IllegalStateException: Failed to load ApplicationContext
+----
+This happens usually if the query you have created has errors and does not compile.
+This is because queries are checked in runtime during startup (not compile-time) - that's why your code compiles,
+but the test or app does not run.
+
 
 == Navigation
 [grid=cols]
 |===
-| <= link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
+link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-business-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
 |===
