@@ -31,7 +31,7 @@ image::images/dataaccess/dataaccess_entities_uml.png[width="1000", link="images/
 
 Each of the entities will have an id generated with a sequence, version which specifies version number of the entity, created and lastUpdated Instant fields, which will inform, when the entity was created and last changed.
 
-The _UserEntity_ will be defined by email, passwordHash, firstname and lastname. The email will always be unique.
+The _UserEntity_ will be defined by email, passwordHash, firstName and lastName. The email will always be unique.
 
 The _ClientEntity_ will have a _UserEntity_, which it's connected to. It will also have a collection of appointments (_AppointmentEntities_).
 
@@ -237,6 +237,10 @@ Nocycle means, the sequence will not start all over again when it reaches the ma
 
 Now create the sequences for all your entities basing off of the sequence for user.
 
+==== CONSTRAINT CHECKS
+
+END_DATE_TIME > DATE_TIME. How would you ensure this using Check Constraint?
+
 ==== INDEXES
 
 Indexes can significantly improve query performance by allowing the database to quickly locate and access rows in a table based on specific columns. It’s important to create indexes on columns that are frequently used in `WHERE` clauses, `JOIN` conditions, or `ORDER BY` statements.
@@ -402,7 +406,7 @@ Create a new class _UserEntity_ in the same package.
 Mark the class with `@Entity` and `@Table` annotations, specifying the table name. Let the class extend our @MappedSuperclass _BaseEntity_ to inherit the attributes _version_, _created_ and _lastUpdated_. 
 Additionally, mark the class with `@Getters` and `@Setters` annotations from lombok - this will allow a getter and setter generation "in the background", without adding them in the class.
 
-Define private attributes based on the schema (_id, email, passwordHash, firstname, lastname_).
+Define private attributes based on the schema (_id, email, passwordHash, firstName, lastName_).
 
 Now, lets configure the _id_ attribute.
 
@@ -1073,8 +1077,8 @@ public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> 
         return queryFactory
                 .selectFrom(client)
                 .leftJoin(client.user, user)
-                .where(user.firstname.eq(firstName)
-                        .and(user.lastname.eq(lastName)))
+                .where(user.firstName.eq(firstName)
+                        .and(user.lastName.eq(lastName)))
                 .fetch();
     }
 }
