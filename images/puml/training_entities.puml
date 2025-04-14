@@ -48,7 +48,8 @@ class AppointmentEntity {
     +Instant lastUpdated
     +ClientEntity client
     +TreatmentEntity treatment
-    +LocalDateTime dateTime
+    +Instant dateTime
+    +Instant endsAt
     +AppointmentStatus status
 }
 
