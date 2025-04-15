@@ -23,7 +23,7 @@ Let's create a Spring Boot application using the Spring Initializer. Follow thes
 *Group*: `com.capgemini.training` +
 *Artifact*: `appointment-booking-app` +
 *Description*: `Java Backend Developer Training` +
-*Package name*: `com.capgemini.training.appointment-booking-app` +
+*Package name*: `com.capgemini.training.appointmentbooking` +
 *Packaging*: Jar +
 *Java*: Select the version corresponding to your JDK installation (`21`)
 . Under *Dependencies*, add the following:
