@@ -1120,7 +1120,7 @@ public class TreatmentRepositoryIT extends BaseDataJpaTest  {
 Implement these queries:
 
 1. Find appointments within a specified time period and having a designated status - using a Spring Query Method.
-2. Find conflicted appointments for given specialistId,  begin date and end date of appointment - using @Query.
+2. Find conflicted appointments for given specialistId,  begin date and end date of appointment (appointment in status CANCELLED is not a conflicting appointment)- using @Query.
 3. Find treatment by name - using NamedQuery and bind it to interface method.
 4. Find treatments by name and specialization - using QueryDSL.
 5. Find appointments history for given client/specialist - using criteria API.
