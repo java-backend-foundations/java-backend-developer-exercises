@@ -1068,8 +1068,8 @@ QueryDSL allows us to write us easy queries. In _ClientRepository_ we can add th
 @Repository
 public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {
 
-    default List<ClientEntity> findByName(String firstName, String lastName, EntityManager entityManager) {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
+    default List<ClientEntity> findByName(String firstName, String lastName) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(getEntityManager());
 
         QClientEntity client = QClientEntity.clientEntity;
         QUserEntity user = QUserEntity.userEntity;
@@ -1093,9 +1093,6 @@ public class TreatmentRepositoryIT extends BaseDataJpaTest  {
     @Autowired
     private ClientRepository clientRepository;
 
-    @PersistenceContext
-    private EntityManager em;
-
     @Test
     void testFindByQueryDSL_testFindClientsByName() {
         // given
@@ -1103,7 +1100,7 @@ public class TreatmentRepositoryIT extends BaseDataJpaTest  {
         String lastName = "Kowalski";
 
         // when
-        List<ClientEntity> clients = clientRepository.findByName(firstName, lastName, em);
+        List<ClientEntity> clients = clientRepository.findByName(firstName, lastName);
 
         // then
         assertThat(clients).isNotEmpty().hasSize(1);
