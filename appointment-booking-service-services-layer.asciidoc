@@ -61,6 +61,13 @@ Please add following dependencies into the `pom.xml` file of your project:
 </dependency>
 ----
 
+=== Add OpenAPI service specification
+
+Copy following file into `api` folder of your project:
+
+- link:assets/service/openapi.yml[openapi.yml]
+
+
 === Configuring the OpenAPI Generator Maven Plugin
 
 To generate the services layer code from the OpenAPI specification, we will use the `openapi-generator-maven-plugin`. This plugin allows us to automate the code generation process during the Maven build.
