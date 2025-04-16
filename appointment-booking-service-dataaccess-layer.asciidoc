@@ -886,7 +886,7 @@ Implement those 2 queries and test them. Before you dive into the code, you may 
 
 1) Find all Treatments with partially given name, ignoring upper and lowercase
 
-2) Find all Appointments for specific Specialist which took place in the past (hint: join statement is needed here)
+2) Find all Appointments for specific Specialist(Id) which took place in the past (hint: join statement is needed here)
 
 
 == Various Query Methods
