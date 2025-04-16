@@ -136,7 +136,7 @@ To test different scenarios, update the code to incorporate more users with role
 | admin | ADMIN, SPECIALIST, RECEPTIONIST
 | specialist | SPECIALIST, RECEPTIONIST
 | receptionist | RECEPTIONIST
-| user | (no roles)
+| client | (no roles)
 |===
 
 === Apply Annotations
@@ -230,9 +230,44 @@ public @interface HasRole {
 * Test restricted endpoints with both authorized and unauthorized users.
 * Ensure proper access control behavior based on roles and endpoints.
 
-== Fixing Service Tests
+== Fixing Tests
 
-// TODO: Add this section after all tests have been implemented
+Right now application may be working as expected but some of the test may be breaking. Why? In case of unit test we are executing only logic implemented with mocked dependencies. Everythign is ignored. In that case there is no changes requireed. Everything will be working as previously. But in case of test which loads application context with configuration, or part of theme it may load our security configuration and it will be checked while executing tests. In most cases there are three solutions:
+
+- Use our defined configuration
+- Define another security configuration for Tests
+- Disable security for tests totally
+
+Of course normally it would be good to test negative cases - if logic is correctly secured - but now we will focus on just fixing it with easiest possible way.
+
+=== *UcTestIT
+All these tests using our actual context configuration but no complete autoconfiguration is executed like in normal application boot. Due to this reason bean like HttpSecurity is not created and our defined configuration will fail. Please add annotation *@EnableWebSecurity* to either our SecurityConfiguration or test class.
+
+Now please configure under which user test method should be executed. Please do that with following annotation:
+[source,java]
+----
+@WithMockUser(username = "admin", roles = {AccessControl.ROLE_ADMIN, AccessControl.ROLE_RECEPTIONIST, AccessControl.ROLE_SPECIALIST})
+----
+You can put it on test method or test class level. Now all test should be running since we are executing method with user which have all possible roles
+
+=== *ApiControllerTest
+
+These test uses WebMvcTest annotation. According to documentation "Annotation that can be used for a Spring MVC test that focuses only on Spring MVC components." and "By default, tests annotated with @WebMvcTest will also auto-configure Spring Security and MockMvc". So in that case we are not using defined by us SecurityConfiguration but default one (similar as starting application without any configuration). We can of course switch to our or disable it at all but please stick with default for now. Default configuration protect all endpoints and has all defaults enabled, like csrf. We need to provide proper csrf attribute and user.
+
+Please adjust test in following way (see *with* methods).
+
+[source,java]
+----
+    mockMvc.perform(post("/api/v1/treatments").contentType(MediaType.APPLICATION_JSON)
+        .with(csrf()) // required only for PUT, POST, DELETE (operations that modify content)
+        .with(user("admin").roles("ADMIN")) // can be replaced with @WithMockUser annotation
+				.content(objectMapper.writeValueAsString(request)))
+        .andExpect(status().isCreated())
+				.andExpect(jsonPath("$.name", is(name)))
+        .andExpect(jsonPath("$.duration", is(duration)))
+				.andExpect(jsonPath("$.specialistId").value(specialistId));
+----
+
 
 == Bonus - Additional Tasks
 
@@ -275,11 +310,11 @@ Steps:
 ** Use the existing `User` table.
 ** Manage role associations properly.
 * Update logic to retrieve users. You can use:
-** `JdbcUserDetailsManager` — define SQL statements.
+** `JdbcUserDetailsManager` — define SQL statements. Be aware that this class treats without without role as non existing. You can add ROLE_CLIENT
 ** A custom `UserDetailsService` — using Spring Repositories or other approaches.
 * Ensure login works immediately after a user is added — no application restart needed.
 
-TIP: See the default schema in: `org/springframework/security/core/userdetails/jdbc/users.ddl`
+TIP: See the default Spring schema for this user details service in: `org/springframework/security/core/userdetails/jdbc/users.ddl`
 
 === Fine-Grained Authorization
 
