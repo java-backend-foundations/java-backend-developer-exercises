@@ -141,7 +141,7 @@ To test different scenarios, update the code to incorporate more users with role
 
 === Apply Annotations
 
-Place security annotations at the *service* layer for this training. Annotations can also be applied to controllers, but each approach has its trade-offs depending on context. Start with the Standard Approach, then continue with the Improved Approach.
+Place security annotations at the *use case* layer for this training. Annotations can also be applied to controllers, but each approach has its trade-offs depending on context. Start with the Standard Approach, then continue with the Improved Approach.
 
 [cols="1,2",options="header"]
 |===
@@ -313,6 +313,8 @@ Steps:
 ** `JdbcUserDetailsManager` — define SQL statements. Be aware that this class treats without without role as non existing. You can add ROLE_CLIENT
 ** A custom `UserDetailsService` — using Spring Repositories or other approaches.
 * Ensure login works immediately after a user is added — no application restart needed.
+
+TIP: User table do not contain login but you can treat email as login.
 
 TIP: See the default Spring schema for this user details service in: `org/springframework/security/core/userdetails/jdbc/users.ddl`
 
