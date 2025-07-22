@@ -16,10 +16,10 @@ After you have completed your own link:appointment-booking-service-setup.asciido
 Going back to our example application, link:appointment-booking-system-specification.asciidoc[Appointment Booking System], we need to provide basic functionalities:
 
 - Adding a new `Treatment` associated with a `Specialist`
-- Retrieving a list of available `Treatments`, optionaly filtered by `Specialist` or `Treatment` name
+- Retrieving a list of available `Treatments`, optionally filtered by `Specialist` or `Treatment` name
 - Retrieving the details of a `Treatment` - gathering information from `Treatment` and connected `Specialist`
 - Choosing a `Treatment` as a `Client` and creating an `Appointment` for a given date and hour
-- Validation of `Appointment` date conflict by checking if the date does not colide with other Appointments assigned to a `Specialist` (there can`t be two `Appointments` created for the same `Specialist` at the same time)
+- Validation of `Appointment` date conflict by checking if the date does not collide with other Appointments assigned to a `Specialist` (there can`t be two `Appointments` created for the same `Specialist` at the same time)
 - Possibility for a `Client` to check their own appointments
 - Cancelling the `Appointment` by the `Client`
 - Marking the `Appointment` as completed by the `Specialist`
@@ -394,7 +394,7 @@ Add a listener with *@PrePersist*:
 
 ----
 
-This will set the fields just before the entity is saved fort the first time.
+This will set the fields just before the entity is saved for the first time.
 Now add a second listener with *@PreUpdate*, that will only update the _lastUpdated_ field, just before executing an update query.
 
 Now you are ready to create your entities!
@@ -994,8 +994,8 @@ default List<AppointmentEntity> findByCriteria(AppointmentCriteria appointmentCr
         Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
         List<Predicate> predicates = new ArrayList<>();
 
-        if (c.status() != null) {
-            predicateList.add(builder.like(root.get("status"), c.status().name()));
+        if (appointmentCriteria.status() != null) {
+            predicates.add(cb.equal(root.get("status"), appointmentCriteria.status().name()));
         }
 
         // another predicates
