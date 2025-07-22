@@ -4,7 +4,7 @@
 
 = Appointment Booking System - Services Layer
 
-In this chapper we are going to create the services layer of the appointment booking system. The services layer is responsible for handling requests from the outside of the backend (e.g. from the presentation layer or from external systems) and orchestrating the interaction between the business logic layer and the external systems. It provides a set of services that can be used by the external systems to perform various operations related to appointment booking.
+In this chapter we are going to create the services layer of the appointment booking system. The services layer is responsible for handling requests from the outside of the backend (e.g. from the presentation layer or from external systems) and orchestrating the interaction between the business logic layer and the external systems. It provides a set of services that can be used by the external systems to perform various operations related to appointment booking.
 
 toc::[]
 
@@ -169,7 +169,7 @@ After running the plugin, verify that the generated code is available in the `ta
 
 The generated classes for representing the API models differ from the Eto and Cto classes provided by the business logic layer. To convert between these two representations, we need to implement mappers that will handle the conversion between the API models and the business logic layer models.
 
-To simplify the implementation, we provide the mappers. Please coppy following files to the `com.capgemini.training.appointmentbooking.service.mapper` package.
+To simplify the implementation, we provide the mappers. Please copy following files to the `com.capgemini.training.appointmentbooking.service.mapper` package.
 
 - link:assets/service/AppointmentApiMapper.java[AppointmentApiMapper.java]
 - link:assets/service/TreatmentApiMapper.java[TreatmentApiMapper.java]
@@ -186,7 +186,7 @@ To be familiar with the generated code, open the `com.capgemini.training.appoint
 - `AppointmentApi.java`: This interface defines the API for managing appointments.
 
 
-Pleas try to complete the implementation of at least one of the APIs. If you have more time you can implement the second API as well.
+Please try to complete the implementation of at least one of the APIs. If you have more time you can implement the second API as well.
 
 === Implementing the TreatmentApi
 
@@ -231,13 +231,13 @@ return ResponseEntity.status(HttpStatus.CREATED).body(treatmentMapper.toApiTreat
 ----
 
 If a treatment is not found, return a `404 Not Found` response.
-If an error occurs during the operation, return a `500 Internal Server Error` response with an appropriate error message. Refer the Openapi specification to ensure the metyhods return the correct HTTP status codes and response formats.
+If an error occurs during the operation, return a `500 Internal Server Error` response with an appropriate error message. Refer the Openapi specification to ensure the methods return the correct HTTP status codes and response formats.
 
 You can also check the generated inferfaces for the `AppointmentApi` and `TreatmentApi` to see the expected request and response formats.
 
 While implementing the controllers, you need to test the services layer to ensure that the implementation is correct. 
 
-- You can use the `MockMvc` framework to test the controllers. Please refer to the link:#implementing-the-tests[Implementing the Tesst] section for more details on how to implement the test cases for the services layer.
+- You can use the `MockMvc` framework to test the controllers. Please refer to the link:#implementing-the-tests[Implementing the Test] section for more details on how to implement the test cases for the services layer.
 - You can use Swagger to test the API endpoints. Swagger provides a user interface that allows you to test the API endpoints directly from the browser. Please refer link:#testing-the-services-layer[Testing the Services Layer]  for more details on how to test the services layer.
 
 
@@ -297,7 +297,7 @@ In this task you can add input validation to your services. Utilize annotations 
 
 Please follow _Bean validation using Hibernate Validator_ in link:appointment-booking-service-business-logic-layer.asciidoc#optional-bean-validation-using-hibernate-validator[Appointment Booking System - Business Logic Layer] for more details. 
 
-If you need to add more validation constraints to the requesst you need to update the OpenAPI specification and regenerate the code. Please refer the Openapi documentation for more details.
+If you need to add more validation constraints to the request you need to update the OpenAPI specification and regenerate the code. Please refer the Openapi documentation for more details.
 
 
 == Testing the Services Layer
