@@ -6,13 +6,13 @@
 
 In this chapter we are going to create business logic layer for already implemented database queries. We are going to prepare UseCases together with Transfer Objects and corresponding tests.
 
-The chapter contains 4 exercises -- the first two are essential, third and forth exercise are optional, and they can be done in any order.
+The chapter contains 4 exercises -- the first two are essential, the third and fourth exercises are optional, and they can be done in any order.
 
 toc::[]
 
 == Design of the Logic Layer and implementation of the first CRUD Use Cases
 
-To get familiar with the structure of the Business Logic Layer will start with the implementation of very basic CRUD (**C**reate, **R**ead, **U**pdate, **D**elete) logic. We are going to create Transfer Objects, add Use Case Interfaces, implement and test them. If you are familiar with the TDD approach (or just want to try it out) you may try using TDD instead of creating all the tests at the end of this exercise.
+To get familiar with the structure of the Business Logic Layer, we will start with the implementation of very basic CRUD (**C**reate, **R**ead, **U**pdate, **D**elete) logic. We are going to create Transfer Objects, add Use Case Interfaces, implement and test them. If you are familiar with the TDD approach (or just want to try it out) you may try using TDD instead of creating all the tests at the end of this exercise.
 
 === Transfer Objects
 
@@ -35,6 +35,7 @@ public class TreatmentEto  {
     private final Long id;
     private final String name;
     private final String description;
+    private final int durationMinutes;
 }
 ----
 
@@ -223,7 +224,7 @@ class ManageTreatmentUcTestIT extends BaseTest {
 }
 ----
 
-In our case, the above integration tests will be relatively fast. However, to run such test we need to start the application context and the tests themselves will talk to the database, so in the real-live scenarios such tests can be very slow. Fortunately, we should already have our repositories tested, so to test our logic layer we can just mock them:
+In our case, the above integration tests will be relatively fast. However, to run such tests we need to start the application context and the tests themselves will talk to the database, so in real-life scenarios such tests can be very slow. Fortunately, we should already have our repositories tested, so to test our logic layer we can just mock them:
 
 [source,java]
 ----
@@ -303,7 +304,7 @@ NOTE: To facilitate searching by specific criteria, create a separate class or r
 
     List<AppointmentCto> findAll();
 
-    boolean hasConflictingAppointment(Long specialistId, Instant dateTime, Instant endDateTime));
+    boolean hasConflictingAppointment(Long specialistId, Instant dateTime, Instant endDateTime);
 ----
 
 - Create `ManageAppointmentUc` interface with the following methods:
