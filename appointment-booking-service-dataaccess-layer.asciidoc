@@ -919,10 +919,10 @@ Directly in the interface create a new method with a @Query annotation and JQPL 
             SELECT a FROM AppointmentEntity a
             JOIN a.treatment t
             WHERE t.specialist.id = :specialistId
-            AND a.dateTime < :date
+            AND a.dateTime < CURRENT_TIMESTAMP
             ORDER BY a.dateTime DESC
             """)
-    List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(@Param("specialistId") Long specialistId, @Param("date") Instant date);
+    List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(@Param("specialistId") Long specialistId);
 
 ----
 
