@@ -19,20 +19,18 @@ Let's create a Spring Boot application using the Spring Initializer. Follow thes
 +
 *Project*: Maven Project +
 *Language*: Java +
-*Spring Boot*: 3.4.4 +
+*Spring Boot*: 3.5.6 +
 *Group*: `com.capgemini.training` +
-*Artifact*: `appointment-booking-app` +
+*Artifact*: `appointment-booking` +
 *Description*: `Java Backend Developer Training` +
 *Package name*: `com.capgemini.training.appointmentbooking` +
 *Packaging*: Jar +
 *Java*: Select the version corresponding to your JDK installation (`21`)
 . Under *Dependencies*, add the following:
 +
-Spring Web, Lombok, H2 Database, Spring Data JPA, Spring Boot Actuator, Flyway Migration
-. Once all information is filled in, click on the *Generate* button to download your project.
-Here is how your Spring Initializer should look like with the chosen options:
+`Spring Boot Actuator`
 +
-image::images/setup/spring-initializer-todo.png[Spring Initializer]
+Once all information is filled in, click on the *Generate* button to download your project.
 . Unzip the downloaded project in a convenient location on your system, like `C:\trainings\java-backend-developer`.
 . Open terminal, go to the location where you have extracted the sample application and build it using Maven:
 +
@@ -45,22 +43,38 @@ mvn clean package
 open IntelliJ and click the buttons shown below:
 +
 image::images/setup/open-in-intellij.png[Open in IntelliJ]
-. Explore the project structure. You'll notice that Spring Initializer has created a basic project setup with the selected dependencies included in the `pom.xml` file.
+. Explore the project structure.
+You'll notice that Spring Initializer has created a basic project setup with the selected dependencies included
+in the `pom.xml` file. You have only 2 dependencies and 1 plugin for now:
+
+----
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+    </plugins>
+</build>
+----
+
+
 
 == Configuring the application
 
-. Add following parameters to the `application.properties` file to enable the H2 Console and configure the H2 data base
-+
---
-[source,properties]
-----
-spring.h2.console.enabled=true
-
-spring.datasource.url=jdbc:h2:mem:appointmentbooking
-spring.datasource.username=sa
-spring.datasource.password=password
-----
---
 . Add following parameters to the `application.properties` file to enable more verbosity from the actuator endpoints
 +
 --
@@ -71,53 +85,84 @@ management.endpoint.health.show-details=always
 management.endpoints.web.exposure.include=*
 ----
 --
-. Add following parameters to the `application.properties` file to configure the Flyway
-+
---
-[source,properties]
-----
-spring.flyway.locations=classpath:db/migration
-spring.flyway.enabled=true
-spring.flyway.clean-on-validation-error=true
-----
---
 
 == Testing  the application
 
-. Look for the `AppointmentBookingAppApplication.java` class and run the application from your IDE. You should see output like this
+. Look for the `AppointmentBookingApplication.java` class and run the application from your IDE.
+You can instead alternatively run application using command in the terminal (run the app directly from source without packaging it):
++
+[source,bash]
+----
+mvn spring-boot:run
+----
+You should see output like this:
 +
 --
 [source,bash]
 --------
-..........
-... : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:todoapp'
-..........
-..........
-... : Exposing 15 endpoints beneath base path '/actuator'
-... : Tomcat started on port 8080 (http) with context path ''
-... : Started AppointmentBookingAppApplication in 7.44 seconds (process running for 8.446)
-... : Initializing Spring DispatcherServlet 'dispatcherServlet'
-... : Initializing Servlet 'dispatcherServlet'
-... : Completed initialization in 1 ms
+...
+2025-10-14T14:00:14.128+02:00  INFO 35512 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : Starting AppointmentBookingApplication using Java 21.0.3 with PID 35512 (C:\Users\pkubicki\Downloads\appointment-booking\appointment-booking\target\classes started by PKUBICKI in C:\Users\pkubicki\Downloads\appointment-booking\appointment-booking)
+2025-10-14T14:00:14.131+02:00  INFO 35512 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : No active profile set, falling back to 1 default profile: "default"
+2025-10-14T14:00:15.299+02:00  INFO 35512 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : Started AppointmentBookingApplication in 1.641 seconds (process running for 2.354)
+
+Process finished with exit code 0
 --------
 --
+
 . Please open the url http://localhost:8080/actuator/health to check whether the application is running correctly. You should get result like this
 +
 --
-image::images/setup/actuator-health.png[Health Endpoint]
+image::images/setup/unable-to-connect-without-spring-boot-starter-web.png[Unable to connect]
 --
-. While implementing the application you will need access to the *H2 Database*. Open the *H2 Console* using the following url http://localhost:8080/h2-console/. Please use the correct access data you have configured previously.
+The issue is that your Spring Boot application starts and then immediately shuts down.
+*You need to add a web starter dependency to keep the application running and serve HTTP requests.*
+Without it, Spring Boot applications exit immediately after startup. Add in your pom following dependency at the end of the dependencies list:
++
+[source,bash]
+----
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+----
+Now run application once again:
+.. if you run from IDE using run configuration, you should always sync maven projects when you have done changes in pom.xml.
+You can do this like shown below:
 +
 --
-image::images/setup/h2-console-login.png[H2 Console - login]
+image::images/setup/sync-maven-changes.png[Sync maven changes]
 --
-After successful login you should see following content
-+
+.. If you are using `mvn spring-boot:run` you will use Maven’s build lifecycle which will always base on up-to-date pom.xml.
+
+Output should be now like this:
+
 --
-image::images/setup/h2-console-content.png[H2 Console - content]
+[source,bash]
+--------
+...
+2025-10-14T14:16:41.596+02:00  INFO 23176 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : Starting AppointmentBookingApplication using Java 21.0.3 with PID 23176 (C:\Users\pkubicki\Downloads\appointment-booking\appointment-booking\target\classes started by PKUBICKI in C:\Users\pkubicki\Downloads\appointment-booking\appointment-booking)
+2025-10-14T14:16:41.600+02:00  INFO 23176 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : No active profile set, falling back to 1 default profile: "default"
+2025-10-14T14:16:42.723+02:00  INFO 23176 --- [appointment-booking] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-10-14T14:16:42.736+02:00  INFO 23176 --- [appointment-booking] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-10-14T14:16:42.736+02:00  INFO 23176 --- [appointment-booking] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2025-10-14T14:16:42.800+02:00  INFO 23176 --- [appointment-booking] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-10-14T14:16:42.801+02:00  INFO 23176 --- [appointment-booking] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1157 ms
+2025-10-14T14:16:43.381+02:00  INFO 23176 --- [appointment-booking] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 1 endpoint beneath base path '/actuator'
+2025-10-14T14:16:43.446+02:00  INFO 23176 --- [appointment-booking] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-10-14T14:16:43.458+02:00  INFO 23176 --- [appointment-booking] [           main] c.c.t.a.AppointmentBookingApplication    : Started AppointmentBookingApplication in 2.322 seconds (process running for 3.123)
+2025-10-14T14:16:44.113+02:00  INFO 23176 --- [appointment-booking] [4)-10.172.32.39] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-14T14:16:44.114+02:00  INFO 23176 --- [appointment-booking] [4)-10.172.32.39] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-10-14T14:16:44.115+02:00  INFO 23176 --- [appointment-booking] [4)-10.172.32.39] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+--------
 --
 
-You're now ready to start developing your Spring Boot application!
+And if you open the url http://localhost:8080/actuator/health to check whether the application is running correctly, you will see:
+
+--
+image::images/setup/actuator-health.png[Health Endpoint]
+--
+
+*You're now ready to start developing your Spring Boot application!*
 
 == Navigation
 [grid=cols]

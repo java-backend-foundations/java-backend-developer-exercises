@@ -9,9 +9,9 @@ Then we will map it into entities model and provide operations for management of
 
 toc::[]
 
-== Create your component
+== Create your domain model
 
-After you have completed your own link:appointment-booking-service-setup.asciidoc[Appointment Booking System Setup], we are going to create our first app component.
+After you have completed your own link:appointment-booking-service-setup.asciidoc[Appointment Booking System Setup], we are going to create our domain model.
 
 Going back to our example application, link:appointment-booking-system-specification.asciidoc[Appointment Booking System], we need to provide basic functionalities:
 
@@ -64,22 +64,134 @@ Only relationships Client - Appointment, and Specialist - Treatment are bidirect
 
 === The database
 
-For the sake of the training we will be working with H2 database engine to create our database schema.
-We will be using flyway to migrate our database scheme.
+For the sake of the training we will be working with https://www.h2database.com/html/main.html[H2 database engine] (in-memory db) to create our database schema.
+We will be using https://mvnrepository.com/artifact/org.flywaydb/flyway-core[Flyway] to migrate our database scheme.
 
-You can check that your schema is valid running AppointmentBookingAppApplication.java which recreates schema after each run. Created schema can be found in the H2 console.
+. Add following parameters to the `application.properties` file to enable the H2 Console and configure the H2 data base
++
+--
+[source,properties]
+----
+spring.h2.console.enabled=true
 
-image::images/dataaccess/dataaccess_database_uml.png[width="500", link="images/dataaccess/dataaccess_database_uml.png"]
+spring.datasource.url=jdbc:h2:mem:appointmentbooking
+spring.datasource.username=sa
+spring.datasource.password=password
+----
+--
+. Add following parameters to the `application.properties` file to configure the Flyway
++
+--
+[source,properties]
+----
+spring.flyway.locations=classpath:db/migration
+spring.flyway.enabled=true
+spring.flyway.clean-on-validation-error=true
+----
+--
+
+. While implementing the application you will need access to the *H2 Database*. Open the *H2 Console* using the following url http://localhost:8080/h2-console/. Please use the correct access data you have configured previously.
++
+--
+image::images/setup/h2-console-login.png[H2 Console - login]
+--
+After successful login you should see following content
++
+--
+image::images/setup/h2-console-content.png[H2 Console - content]
+--
+
+Running application you should see in the log:
+
+--
+[source,bash]
+--------
+..........
+... : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:todoapp'
+..........
+..........
+... : Exposing 15 endpoints beneath base path '/actuator'
+... : Tomcat started on port 8080 (http) with context path ''
+... : Started AppointmentBookingAppApplication in 7.44 seconds (process running for 8.446)
+... : Initializing Spring DispatcherServlet 'dispatcherServlet'
+... : Initializing Servlet 'dispatcherServlet'
+... : Completed initialization in 1 ms
+--------
+--
+
+You can check that your schema is valid running AppointmentBookingApplication.java which recreates schema after each run. Created schema can be found in the H2 console.
+
+// image::images/dataaccess/dataaccess_database_uml.png[width="500", link="images/dataaccess/dataaccess_database_uml.png"]
+[plantuml, database-schema, svg]
+----
+@startuml
+entity APPLICATION_USER {
+  *ID : NUMBER(19,0)
+  *VERSION : INTEGER
+  *EMAIL : VARCHAR(254) --RFC 5321
+  *PASSWORD_HASH : VARCHAR(128)
+  *FIRST_NAME : VARCHAR(128)
+  *LAST_NAME : VARCHAR(128)
+  *CREATED : TIMESTAMP
+  *LAST_UPDATED : TIMESTAMP
+  --
+  UNIQUE_USER_EMAIL
+}
+
+entity CLIENT {
+  *ID : NUMBER(19,0)
+  *USER_ID : NUMBER(19,0)
+  --
+  FK_USER_ID
+}
+
+entity SPECIALIST {
+  *ID : NUMBER(19,0)
+  *USER_ID : NUMBER(19,0)
+  *SPECIALIZATION : VARCHAR(128)
+  --
+  FK_USER_ID
+}
+
+entity TREATMENT {
+  *ID : NUMBER(19,0)
+  *NAME : VARCHAR(128)
+  *DESCRIPTION : TEXT
+  *DURATION_MINUTES : INTEGER
+  *SPECIALIST_ID : NUMBER(19,0)
+  --
+  FK_SPECIALIST_ID
+}
+
+entity APPOINTMENT {
+  *ID : NUMBER(19,0)
+  *DATE_TIME : TIMESTAMP
+  *END_DATE_TIME : TIMESTAMP
+  *STATUS : VARCHAR(32)
+  *CLIENT_ID : NUMBER(19,0)
+  *TREATMENT_ID : NUMBER(19,0)
+  --
+  FK_CLIENT_ID
+  FK_TREATMENT_ID
+}
+
+APPLICATION_USER ||--|| CLIENT : is a
+APPLICATION_USER ||--|| SPECIALIST : is a
+SPECIALIST ||--o{ TREATMENT : provides
+CLIENT ||--o{ APPOINTMENT : books
+TREATMENT ||--o{ APPOINTMENT : includes
+@enduml
+----
 
 Lets start with the database schema. Create a new sql file _V0001__Create_schema.sql_ in appointment-booking-app/src/main/resources/db/migration/1.0/ folder.
 
-==== _USER_TABLE_ table
+==== _APPLICATION_USER_ table
 
-We will add our first table USER_TABLE in /appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql. In the case of AppointmentBookingService, the Users will provide: id, version, email etc. Additionally, emails need to be unique among all users. So we need to represent that data in our table:
+We will add our first table APPLICATION_USER in /appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql. In the case of AppointmentBookingService, the Users will provide: id, version, email etc. Additionally, emails need to be unique among all users. So we need to represent that data in our table:
 
 [source,sql]
 ----
-CREATE TABLE USER_TABLE (
+CREATE TABLE APPLICATION_USER (
     ID NUMBER(19,0) NOT NULL,
     VERSION INTEGER NOT NULL,
     EMAIL VARCHAR(128) NOT NULL,
@@ -107,12 +219,12 @@ We will also set the constraints:
 - primary key for id to take care of it's uniqueness.
 - UNIQUE_USER_EMAIL unique constraing for email column.
 
-Notice, how we are using *USER_TABLE* instead of just *USER* as a name. USER is a reserved word, and we can't create a table with that name.
+Notice, how we are using *APPLICATION_USER* instead of just *USER* as a name. USER is a reserved word, and we can't create a table with that name.
 
 ==== _CLIENT_ table
 
 We will now add the CLIENT table in `/appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql`.  
-Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and USER_TABLE. We add the *ON DELETE CASCADE* clause, because Client can't exist without a User - and if the User is deleted, the Client should be removed as well.  
+Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and APPLICATION_USER. We add the *ON DELETE CASCADE* clause, because Client can't exist without a User - and if the User is deleted, the Client should be removed as well.
 
 [source,sql]
 ----
@@ -123,7 +235,7 @@ CREATE TABLE CLIENT (
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (ID),
-    FOREIGN KEY (USER_ID) REFERENCES USER_TABLE(ID) ON DELETE CASCADE
+    FOREIGN KEY (USER_ID) REFERENCES APPLICATION_USER(ID) ON DELETE CASCADE
 );
 ----
 
@@ -131,19 +243,19 @@ CREATE TABLE CLIENT (
 - VERSION: used internally by JPA to handle optimistic locking.
 - CREATED: informs, when the entity was first created and saved. Default: current point in time
 - LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-- USER_ID: a reference to the associated user in the USER_TABLE.
+- USER_ID: a reference to the associated user in the APPLICATION_USER.
 
 We will also set the constraints:
 
 - primary key for ID to ensure uniqueness.
-- foreign key constraint linking USER_ID to the USER_TABLE.
+- foreign key constraint linking USER_ID to the APPLICATION_USER.
 
 Since a User can either be a Client or a Specialist (but not both), this table ensures proper role separation in the system.
 
 ==== _SPECIALIST_ table
 
 Now lets add the SPECIALIST table.
-Each Specialist is associated with a User, meaning there is a **one-to-one relationship** between the SPECIALIST and USER_TABLE.  
+Each Specialist is associated with a User, meaning there is a **one-to-one relationship** between the SPECIALIST and APPLICATION_USER.
 Additionally, a Specialist has a specialization field to describe their expertise.
 
 The table should contain following columns:
@@ -153,12 +265,12 @@ The table should contain following columns:
 - CREATED: informs, when the entity was first created and saved. Default: current point in time
 - LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
 - SPECIALIZATION: the field of expertise for the specialist (e.g. "Dentist", "Orthopaedist").
-- USER_ID: a reference to the associated user in the USER_TABLE.
+- USER_ID: a reference to the associated user in the APPLICATION_USER.
 
 We will also set the constraints:
 
 - primary key for ID to ensure uniqueness.
-- foreign key constraint linking USER_ID to the USER_TABLE. Remember about *ON DELETE CASCADE* clause.
+- foreign key constraint linking USER_ID to the APPLICATION_USER. Remember about *ON DELETE CASCADE* clause.
 
 ==== _TREATMENT_ table
 
@@ -263,16 +375,16 @@ Finally we can provide a certain amount of mock data to start our app. Add a new
 [%nowrap,sql]
 ----
 -- USERS - Clients
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-1, 0, 'Stefan', 'Kowalski', 'passwordHash1', 'stefan.kowalski@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-2, 0, 'Anna', 'Nowak', 'passwordHash2', 'annan@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-3, 0, 'Luiza', 'Poniatowska', 'passwordHash3', 'poniatowskaluiza@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-4, 0, 'Grzegorz', 'Maniewicz', 'passwordHash4', 'g.maniewicz@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-1, 0, 'Stefan', 'Kowalski', 'passwordHash1', 'stefan.kowalski@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-2, 0, 'Anna', 'Nowak', 'passwordHash2', 'annan@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-3, 0, 'Luiza', 'Poniatowska', 'passwordHash3', 'poniatowskaluiza@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-4, 0, 'Grzegorz', 'Maniewicz', 'passwordHash4', 'g.maniewicz@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- USERS - Specialists
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-5, 0, 'Dobromir', 'Zegula', 'passwordHash5', 'zegula.d@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-6, 0, 'Monika', 'Siewiczowa', 'passwordHash6', 'monika.s@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-7, 0, 'Andrzej', 'Piaseczny', 'passwordHash7', 'a.j.piaseczny@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO USER_TABLE(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-8, 0, 'Patrycja', 'Milewska', 'passwordHash8', 'milewskap@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-5, 0, 'Dobromir', 'Zegula', 'passwordHash5', 'zegula.d@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-6, 0, 'Monika', 'Siewiczowa', 'passwordHash6', 'monika.s@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-7, 0, 'Andrzej', 'Piaseczny', 'passwordHash7', 'a.j.piaseczny@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-8, 0, 'Patrycja', 'Milewska', 'passwordHash8', 'milewskap@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- CLIENTS
 INSERT INTO CLIENT(ID, VERSION, USER_ID, CREATED, LAST_UPDATED) VALUES (-1, 0, -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
@@ -421,7 +533,7 @@ To ensure correct mapping to the database, add the `@Column` annotation with a s
 [source,java]
 ----
 @Entity
-@Table(name = "USER_TABLE")
+@Table(name = "APPLICATION_USER")
 @Getter
 @Setter
 public class UserEntity {
@@ -450,7 +562,7 @@ Remember to use a different name for a generator and an already created sequence
 Now, lets implement the **uni-directional @OneToOne relationship** between the Client and the User. 
 ClientEntity will be the owner of the relationship. Add a private attribute of type UserEntity in ClientEntity. Mark it with @OneToOne annotation and specify, that the relationship is not optional. Specify the cascade operations - only cascade _Persist_ operation. 
 Define fetch type as lazy.
-Additionally, you can add a @JoinColumn annotation, which will precisely describe what is the name of the Foreign Key column in the database in the CLIENT table, and which column it references in USER_TABLE table.
+Additionally, you can add a @JoinColumn annotation, which will precisely describe what is the name of the Foreign Key column in the database in the CLIENT table, and which column it references in APPLICATION_USER table.
 
 [source,java]
 ----
@@ -508,7 +620,7 @@ But before that, let’s implement the **uni-directional @OneToOne relationship*
 _SpecialistEntity_ will be the owner of the relationship.  
 Add a private attribute of type _UserEntity_ in _SpecialistEntity_. Mark it with `@OneToOne` annotation and define as non-optional. Specify the cascade operations - only cascade _Persist_ operation. 
 Define fetch type as lazy. 
-Additionally, you can use `@JoinColumn` to specify the foreign key column in the _SPECIALIST_ table and its reference in _USER_TABLE_.
+Additionally, you can use `@JoinColumn` to specify the foreign key column in the _SPECIALIST_ table and its reference in _APPLICATION_USER_.
 
 To ensure correct mapping to the database, add the `@Column` annotation with a specified name where needed.
 

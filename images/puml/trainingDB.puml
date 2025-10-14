@@ -1,6 +1,6 @@
 @startuml
 
-entity USER_TABLE {
+entity APPLICATION_USER {
     + ID : NUMBER(19,0) <<PK>>
     + VERSION : INTEGER
     + CREATED TIMESTAMP
@@ -51,8 +51,8 @@ entity APPOINTMENT {
     + TREATMENT_ID : NUMBER(19,0) <<FK>>
 }
 
-USER_TABLE ||--|{ CLIENT : "has"
-USER_TABLE ||--|{ SPECIALIST : "has"
+APPLICATION_USER ||--|{ CLIENT : "has"
+APPLICATION_USER ||--|{ SPECIALIST : "has"
 SPECIALIST ||--|{ TREATMENT : "provides"
 CLIENT ||--|{ APPOINTMENT : "books"
 TREATMENT ||--|{ APPOINTMENT : "involves"
