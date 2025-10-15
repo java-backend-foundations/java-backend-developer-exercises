@@ -82,6 +82,67 @@ Only `Client ↔ Appointment` and `Specialist ↔ Treatment` relationships are b
 Consider this scenario: What happens when a user who is both a client and a specialist tries to book an appointment with themselves? How should the system handle this edge case?
 ====
 
+== Adding Database and Utility Dependencies
+
+Before we can work with databases and entities, we need to add the required dependencies to our project.
+
+=== Required Dependencies
+
+Add the following dependencies to your `pom.xml` inside the `<dependencies>` section:
+
+[source,xml]
+----
+<!-- Spring Data JPA provides integration with Hibernate and simplifies database persistence through repositories -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<!-- H2 is an in-memory database used for lightweight development and testing -->
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+
+<!-- Flyway manages database schema migrations automatically on application startup -->
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-core</artifactId>
+</dependency>
+----
+
+=== Why These Dependencies?
+
+* **spring-boot-starter-data-jpa** — Integrates Spring Data JPA and Hibernate, making persistence and repository use easy
+* **H2** — Provides an in-memory relational database, perfect for demos and testing where no external DB is needed
+* **Flyway** — Enables controlled, versioned database schema migrations to manage changes over time
+
+=== Verify Integration
+
+After adding dependencies, reload your Maven project (e.g., "Reimport Maven Project" in IntelliJ IDEA). Spring Boot will auto-configure the JPA EntityManager, H2 data source, and Flyway migration mechanism without extra setup.
+
+[NOTE]
+====
+*About Dependency Versions:* You don't see explicit `<version>` tags because the parent project `spring-boot-starter-parent` manages tested dependency versions via its `<dependencyManagement>` section. This approach ensures:
+
+* Consistent, compatible versions across all Spring Boot dependencies
+* Simplified maintenance during upgrades  
+* Clean, shorter pom.xml with fewer version conflicts
+
+If you need to override a dependency's version (for example, to test a newer Flyway), you can add the `<version>` element explicitly — but keep this only for special cases.
+====
+
+[IMPORTANT]
+====
+After adding these dependencies, your application will have access to:
+
+* JPA annotations (`@Entity`, `@Table`, `@Id`, etc.)
+* Repository interfaces (`JpaRepository`, `CrudRepository`)
+* H2 database console at `/h2-console`
+* Automatic Flyway migration execution on startup
+====
+
 == Database Configuration
 
 === Technology Stack
@@ -108,19 +169,54 @@ spring.datasource.url=jdbc:h2:mem:appointmentbooking
 spring.datasource.username=sa
 spring.datasource.password=password
 ----
+By design, the in-memory database is volatile, and results in data loss after application restart.
+
+We can change that behavior by using file-based storage. To do this we need to update the spring.datasource.url property:
+[source,properties]
+----
+spring.datasource.url=jdbc:h2:file:/data/demo
+----
 
 ==== Flyway Configuration
 [source,properties]
 ----
 spring.flyway.locations=classpath:db/migration
 spring.flyway.enabled=true
-spring.flyway.clean-on-validation-error=true
 ----
 
-[IMPORTANT]
+==== JPA and Hibernate Configuration
+[source,properties]
+----
+# Hibernate DDL-auto is recommended as 'none' when using Flyway for migrations
+spring.jpa.hibernate.ddl-auto=none
+
+# Show SQL queries in logs for easier debugging
+spring.jpa.show-sql=true
+----
+
+**Understanding DDL-auto Configuration:**
+
+With `ddl-auto=none` and Flyway active, you rely entirely on Flyway scripts to define and evolve the schema safely and reproducibly. This approach:
+
+* **Prevents conflicts** between Hibernate's automatic schema generation and Flyway migrations
+* **Ensures consistency** across different environments (dev, test, production)
+* **Provides version control** for all database changes through migration files
+* **Enables rollback capabilities** and change tracking
+
+[WARNING]
 ====
-The `clean-on-validation-error=true` setting will drop and recreate your database if migration validation fails. This is useful for development but dangerous in production!
+Never use `ddl-auto=create` or `ddl-auto=create-drop` with Flyway in production! This could lead to data loss and schema conflicts.
 ====
+
+**SQL Logging:**
+
+The `show-sql=true` setting displays all generated SQL queries in your application logs, which is invaluable for:
+
+* **Debugging** query performance issues
+* **Understanding** what Hibernate generates from your JPA queries
+* **Learning** how different JPA annotations translate to SQL
+* **Optimizing** database interactions
+
 
 === Accessing the H2 Console
 
@@ -404,7 +500,7 @@ VALUES (-5, 0, 'Anna', 'Nowak', 'passwordHash5', 'dr.nowak@clinic.com', CURRENT_
 
 === Lombok Setup
 
-Add Lombok dependency to the pom.xml to reduce boilerplate code:
+Add https://projectlombok.org/[Lombok] dependency to the pom.xml to reduce boilerplate code:
 
 [source,xml]
 ----
@@ -414,6 +510,8 @@ Add Lombok dependency to the pom.xml to reduce boilerplate code:
     <scope>provided</scope>
 </dependency>
 ----
+
+It generates constructors, getters, and setters automatically, improving code readability. Its version should be managed by Spring Boot.
 
 [IMPORTANT]
 ====
