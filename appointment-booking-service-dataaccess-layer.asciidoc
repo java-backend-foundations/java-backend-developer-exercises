@@ -474,27 +474,26 @@ Indexes on foreign keys are crucial for:
 
 === Sample Data
 
-Create `V0002__Create_mockdata.sql` with sample data:
+To provide realistic test data for our application, create the migration file `src/main/resources/db/migration/V0002__Create_mockdata.sql`.
 
-[source,sql]
-----
--- noinspection SqlResolveForFile @ table/"APPLICATION_USER"
+You can download the complete sample data file from: link:V0002__Create_mockdata.sql[V0002__Create_mockdata.sql]
 
--- Sample Users (Clients)
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) 
-VALUES (-1, 0, 'Stefan', 'Kowalski', 'passwordHash1', 'stefan.kowalski@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+This sample data includes:
 
--- Sample Users (Specialists)  
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) 
-VALUES (-5, 0, 'Anna', 'Nowak', 'passwordHash5', 'dr.nowak@clinic.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-
--- Continue with CLIENT, SPECIALIST, TREATMENT, and APPOINTMENT data...
-----
+* **8 Users**: 4 clients and 4 specialists with realistic Polish names and email addresses
+* **4 Clients**: Linked to the first 4 users
+* **4 Specialists**: With different specializations (Dentist, Cardiologist, Pediatrician, Orthopaedist)
+* **12 Treatments**: Polish medical procedures with realistic durations (30-180 minutes)
+* **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for comprehensive testing
 
 [NOTE]
 ====
 *Think about it:* Why do we use negative IDs for sample data? This prevents conflicts with sequence-generated positive IDs in production.
+
+Notice how the END_DATE_TIME is calculated based on DATE_TIME + DURATION_MINUTES from the treatment. This ensures data consistency and realistic appointment scheduling.
 ====
+
+After creating the migration file, run your application and verify the data is inserted correctly using the H2 Console.
 
 == Entity Implementation
 
