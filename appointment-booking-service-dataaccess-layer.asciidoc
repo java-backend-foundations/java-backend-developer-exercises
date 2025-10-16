@@ -385,6 +385,11 @@ Remember to include:
 * Foreign key constraint with `ON DELETE CASCADE`
 * Proper NOT NULL constraints
 
+[TIP]
+====
+Use the CLIENT table structure as a reference. The SPECIALIST table follows the same pattern with one additional column for specialization.
+====
+
 === TREATMENT Table
 
 [source,sql]
@@ -412,16 +417,26 @@ CREATE TABLE TREATMENT (
 
 **Exercise**: Create the APPOINTMENT table with these fields:
 
-* **ID**: Primary key
-* **VERSION**: Optimistic locking
-* **DATE_TIME**: Appointment start time
-* **END_DATE_TIME**: Appointment end time
+* **ID**: Primary key (NUMBER(19,0))
+* **VERSION**: Optimistic locking (INTEGER)
+* **DATE_TIME**: Appointment start time (TIMESTAMP)
+* **END_DATE_TIME**: Appointment end time (TIMESTAMP)
 * **STATUS**: Appointment status (VARCHAR(32), default 'SCHEDULED')
-* **CLIENT_ID**: Foreign key to CLIENT
-* **TREATMENT_ID**: Foreign key to TREATMENT
+* **CLIENT_ID**: Foreign key to CLIENT (NUMBER(19,0))
+* **TREATMENT_ID**: Foreign key to TREATMENT (NUMBER(19,0))
 * **CREATED/LAST_UPDATED**: Audit timestamps
 
 Status values: `SCHEDULED`, `CANCELLED`, `COMPLETED`
+
+Constraints:
+* Primary key on ID
+* Foreign keys with `ON DELETE CASCADE` for both CLIENT_ID and TREATMENT_ID
+* Check constraint: END_DATE_TIME > DATE_TIME (see Constraint Checks section)
+
+[TIP]
+====
+Notice that APPOINTMENT has TWO foreign keys. This is different from the one-to-one relationships you've seen so far. Study the schema diagram to understand the relationships.
+====
 
 === Database Sequences
 
@@ -443,13 +458,21 @@ CREATE SEQUENCE APPOINTMENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
 
 === Constraint Checks
 
-Add a check constraint to ensure appointment end time is after start time:
+**Exercise**: Add a check constraint to ensure appointment end time is after start time.
 
-[source,sql]
-----
-ALTER TABLE APPOINTMENT ADD CONSTRAINT CHK_APPOINTMENT_TIME 
-CHECK (END_DATE_TIME > DATE_TIME);
-----
+[TIP]
+====
+Syntax hint:
+```sql
+ALTER TABLE ... ADD CONSTRAINT CHK_..._TIME
+CHECK (...);
+```
+====
+
+[NOTE]
+====
+*Think about it:* Why is this constraint important at the database level, even though it could also be enforced in Java code? Consider the defense-in-depth principle.
+====
 
 === Database Indexes
 
@@ -476,21 +499,22 @@ Indexes on foreign keys are crucial for:
 
 To provide realistic test data for our application, create the migration file `src/main/resources/db/migration/V0002__Create_mockdata.sql`.
 
-You can download the complete sample data file from: link:V0002__Create_mockdata.sql[V0002__Create_mockdata.sql]
+[TIP]
+====
+You can download the complete sample data from the file: link:V0002__Create_mockdata.sql[V0002__Create_mockdata.sql] or use the following structure:
 
-This sample data includes:
-
-* **8 Users**: 4 clients and 4 specialists with realistic Polish names and email addresses
+* **8 Users**: 4 clients and 4 specialists
 * **4 Clients**: Linked to the first 4 users
 * **4 Specialists**: With different specializations (Dentist, Cardiologist, Pediatrician, Orthopaedist)
-* **12 Treatments**: Polish medical procedures with realistic durations (30-180 minutes)
-* **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for comprehensive testing
-
-[NOTE]
+* **12 Treatments**: Medical procedures with realistic durations (30-180 minutes)
+* **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for testing
 ====
-*Think about it:* Why do we use negative IDs for sample data? This prevents conflicts with sequence-generated positive IDs in production.
 
-Notice how the END_DATE_TIME is calculated based on DATE_TIME + DURATION_MINUTES from the treatment. This ensures data consistency and realistic appointment scheduling.
+[IMPORTANT]
+====
+Use negative IDs for test data (e.g., -1, -2, -3). This prevents conflicts with sequence-generated positive IDs and makes test data easily identifiable.
+
+The END_DATE_TIME should be calculated as: DATE_TIME + DURATION_MINUTES. This ensures data consistency with actual treatment durations.
 ====
 
 After creating the migration file, run your application and verify the data is inserted correctly using the H2 Console.
@@ -514,7 +538,7 @@ It generates constructors, getters, and setters automatically, improving code re
 
 [IMPORTANT]
 ====
-Install the Lombok plugin in your IDE for proper annotation processing and code completion.
+Install the https://projectlombok.org/setup/overview[Lombok plugin in your IDE]. This is required for proper annotation processing and code completion. Without it, IDE may show false errors despite successful compilation.
 ====
 
 === Package Structure
@@ -522,38 +546,38 @@ Install the Lombok plugin in your IDE for proper annotation processing and code 
 Create these packages under `com.capgemini.training.appointmentbooking`:
 
 * `dataaccess.entity` - Entity classes
-* `dataaccess.converter` - JPA attribute converters  
+* `dataaccess.converter` - JPA attribute converters
 * `common.datatype` - Enums and common types
 
 === BaseEntity Implementation
 
-Notice, that attributes _version_, _lastUpdated_ and _created_ are repeated in every entity. To make the structure cleaner and avoid duplicated code, let's extract a @MappedSuperclass, that each of our entities will extend.
+Notice that attributes _version_, _lastUpdated_ and _created_ are repeated in every entity. To make the structure cleaner and avoid duplicated code, extract a `@MappedSuperclass` that each entity will extend.
 
-Create a base class in package _com.capgemini.training.appointmentbooking.dataaccess.entity_ to eliminate duplicate audit fields:
+Create a base class in package `com.capgemini.training.appointmentbooking.dataaccess.entity` to eliminate duplicate audit fields:
 
 [source,java]
 ----
 @MappedSuperclass
 @Getter
 public class BaseEntity {
-    
+
     @Version
     @Setter
     private int version;
 
     @Column(insertable = true, updatable = false)
     private Instant created;
-    
+
     @Column(name = "LAST_UPDATED")
     private Instant lastUpdated;
-    
+
     @PrePersist
     public void prePersist() {
         Instant now = Instant.now();
         this.created = now;
         this.lastUpdated = now;
     }
-    
+
     @PreUpdate
     public void preUpdate() {
         this.lastUpdated = Instant.now();
@@ -563,7 +587,14 @@ public class BaseEntity {
 
 [NOTE]
 ====
-*Think about it:* Why don't we provide setters for `created` and `lastUpdated`? How do the `@PrePersist` and `@PreUpdate` annotations help maintain data integrity?
+*Lifecycle methods explained:*
+
+* `@PrePersist` - Called just before the entity is saved for the first time (INSERT)
+* `@PreUpdate` - Called just before an existing entity is updated (UPDATE)
+
+Why no setters for `created` and `lastUpdated`? Because they should only be set automatically by the database lifecycle, never modified directly. The `@PrePersist` and `@PreUpdate` methods enforce this immutability through the framework.
+
+Why is `@Version` only on version with `@Setter`? Because JPA needs to update the version field automatically on every modification. Other audit fields are set by lifecycle methods instead.
 ====
 
 === UserEntity Implementation
@@ -575,18 +606,35 @@ public class BaseEntity {
 @Getter
 @Setter
 public class UserEntity extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USER_SEQ_GEN")
-    @SequenceGenerator(sequenceName = "USER_SEQ", name = "USER_SEQ_GEN", 
+    @SequenceGenerator(sequenceName = "USER_SEQ", name = "USER_SEQ_GEN",
                        allocationSize = 100, initialValue = 1)
     private Long id;
-    
+
     private String email;
-    
-    // TODO: write the rest of the code
+
+    @Column(name = "PASSWORD_HASH")
+    private String passwordHash;
+
+    // TODO: Add firstName and lastName fields
+    // Remember: use @Getter and @Setter from Lombok (already on class)
+
 }
 ----
+
+==== Key Points
+
+* The `@Table(name = "APPLICATION_USER")` explicitly maps to our database table
+* The `@SequenceGenerator` links to the `USER_SEQ` sequence we created in SQL
+* The `allocationSize = 100` matches our sequence increment to optimize performance
+* The `@Column(name = "PASSWORD_HASH")` is needed because Java naming conventions differ from SQL
+
+[NOTE]
+====
+*Think about it:* Why map the `@Table` name explicitly when it could default to lowercase table names? Consider what happens when your database uses uppercase names or reserved words.
+====
 
 === Specialization Enum
 
@@ -595,14 +643,14 @@ Create the enum in `common.datatype` package:
 [source,java]
 ----
 public enum Specialization {
-    
-    DENTIST("Dentist"), 
-    CARDIOLOGIST("Cardiologist"), 
-    PEDIATRICIAN("Pediatrician"), 
-    UROLOGIST("Urologist"), 
-    NEUROLOGIST("Neurologist"), 
+
+    DENTIST("Dentist"),
+    CARDIOLOGIST("Cardiologist"),
+    PEDIATRICIAN("Pediatrician"),
+    UROLOGIST("Urologist"),
+    NEUROLOGIST("Neurologist"),
     ORTHOPAEDIST("Orthopaedist");
-    
+
     private final String name;
 
     Specialization(String name) {
@@ -612,7 +660,7 @@ public enum Specialization {
     public String getName() {
         return this.name;
     }
-    
+
     public static Specialization getByName(String name) {
         for (Specialization s : Specialization.values()) {
             if (s.getName().equals(name)) {
@@ -624,9 +672,27 @@ public enum Specialization {
 }
 ----
 
+[NOTE]
+====
+*Think about it:* Why define a custom `name` field instead of using the enum constant name directly (e.g., `DENTIST.name()`)? Consider the database values in your migration scripts - they don't match the default enum names perfectly.
+====
+
+=== AppointmentStatus Enum
+
+Create alongside `Specialization` in `common.datatype` package:
+
+[source,java]
+----
+public enum AppointmentStatus {
+    SCHEDULED, CANCELLED, COMPLETED
+}
+----
+
+This enum represents the possible appointment states. It will be stored in the database using `@Enumerated(EnumType.STRING)` to maintain readability.
+
 === Attribute Converter
 
-Create `SpecializationConverter` in `dataaccess.converter`:
+Create `SpecializationConverter` in `dataaccess.converter` package:
 
 [source,java]
 ----
@@ -647,12 +713,37 @@ public class SpecializationConverter implements AttributeConverter<Specializatio
 
 [NOTE]
 ====
-*Think about it:* Why use a custom converter instead of `@Enumerated`? Custom converters provide more control over database representation and are more resilient to enum reordering.
+*Think about it:* Why use a custom converter instead of `@Enumerated`?
+
+With `@Enumerated`, you're limited to storing either the enum constant name or ordinal value. Custom converters let you:
+- Store the display name (e.g., "Dentist" instead of "DENTIST")
+- Control database format independently of Java enum changes
+- Implement custom serialization logic for complex transformations
+
+However, `@Enumerated` is simpler for straightforward cases. Choose converters when you need custom control.
 ====
 
-=== Entity Relationships
+=== Entity Relationships & Implementations
 
-==== ClientEntity with One-to-One Relationship
+==== Understanding Relationships
+
+Before implementing entities, understand the relationship types:
+
+* **One-to-One (1:1)**: User ↔ Client (each user has max one client record)
+* **One-to-Many (1:n)**: Specialist → Treatments (one specialist provides many treatments)
+* **Many-to-One (n:1)**: Treatments → Specialist (many treatments from one specialist)
+* **Many-to-Many (n:m)**: Not used in this schema
+
+Relationships can be **unidirectional** (one side knows the other) or **bidirectional** (both sides know each other).
+
+[NOTE]
+====
+*Which side owns the relationship?*
+
+In bidirectional relationships, one side is the "owner" (holds the foreign key) and the other is "mapped by" (read-only). The owner side determines what gets persisted to the database. Always put `@JoinColumn` on the owner side.
+====
+
+==== ClientEntity with Bidirectional Relationships
 
 [source,java]
 ----
@@ -661,41 +752,158 @@ public class SpecializationConverter implements AttributeConverter<Specializatio
 @Getter
 @Setter
 public class ClientEntity extends BaseEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "CLIENT_SEQ_GEN")
-    @SequenceGenerator(sequenceName = "CLIENT_SEQ", name = "CLIENT_SEQ_GEN", 
+    @SequenceGenerator(sequenceName = "CLIENT_SEQ", name = "CLIENT_SEQ_GEN",
                        allocationSize = 100, initialValue = 1)
     private Long id;
-    
+
+    // Unidirectional one-to-one: ClientEntity -> UserEntity
+    // This is the owning side (holds the foreign key)
     @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST})
     @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
     private UserEntity user;
-    
-    @OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval = true, 
+
+    // Bidirectional one-to-many: ClientEntity <- AppointmentEntity
+    // This is the non-owning side (AppointmentEntity is the owner)
+    @OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval = true,
                cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private List<AppointmentEntity> appointments = new ArrayList<>();
 }
 ----
 
-==== SpecialistEntity with Converter
+[TIP]
+====
+Key parameters explained:
 
-**Exercise**: Implement `SpecialistEntity` following the `ClientEntity` pattern, but add:
-* `@Convert(converter = SpecializationConverter.class)` for the specialization field
-* Bidirectional relationship with `TreatmentEntity`
+* `optional = false` - Client must have a User (enforces 1:1 constraint)
+* `fetch = FetchType.LAZY` - Don't load user until explicitly accessed (performance)
+* `cascade = {CascadeType.PERSIST}` - When saving client, also save new user
+* `orphanRemoval = true` - Delete appointments if removed from the list
+* `mappedBy = "client"` - The AppointmentEntity side owns this relationship
+====
+
+==== SpecialistEntity Exercise
+
+**Exercise**: Implement `SpecialistEntity` following the pattern of `ClientEntity`, but with these requirements:
+
+[source,java]
+----
+@Entity
+@Table(name = "SPECIALIST")
+@Getter
+@Setter
+public class SpecialistEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SPECIALIST_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "SPECIALIST_SEQ", name = "SPECIALIST_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add one-to-one relationship with UserEntity (same pattern as ClientEntity)
+
+    // TODO: Add specialization field with @Convert annotation
+    // Hint: Use SpecializationConverter
+
+    // TODO: Add bidirectional one-to-many relationship with TreatmentEntity
+    // Hint: Use cascade {PERSIST, REMOVE} and orphanRemoval = true
+}
+----
+
+[TIP]
+====
+Reference the ClientEntity implementation above. The pattern is nearly identical, with one difference: you'll add a bidirectional relationship with `TreatmentEntity` instead of `AppointmentEntity`.
+====
+
+==== TreatmentEntity with Many-to-One Relationship
+
+**Exercise**: Implement `TreatmentEntity` with the following requirements:
+
+[source,java]
+----
+@Entity
+@Table(name = "TREATMENT")
+@Getter
+@Setter
+public class TreatmentEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "TREATMENT_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "TREATMENT_SEQ", name = "TREATMENT_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add name field (VARCHAR(128))
+    // TODO: Add description field (TEXT)
+    // TODO: Add durationMinutes field (INTEGER)
+
+    // Many-to-one: TreatmentEntity -> SpecialistEntity (owning side)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "SPECIALIST_ID")
+    private SpecialistEntity specialist;
+}
+----
+
+[NOTE]
+====
+*Why is this owning side different from ClientEntity?*
+
+In `@ManyToOne`, the owning side is always the many side (the side with foreign key in database). The SpecialistEntity side will be non-owning with `@OneToMany(mappedBy = "specialist", ...)` that you'll add to SpecialistEntity.
+====
+
+==== AppointmentEntity Exercise
+
+**Exercise**: Implement `AppointmentEntity` with relationships to both `ClientEntity` and `TreatmentEntity`:
+
+[source,java]
+----
+@Entity
+@Table(name = "APPOINTMENT")
+@Getter
+@Setter
+public class AppointmentEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "APPOINTMENT_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "APPOINTMENT_SEQ", name = "APPOINTMENT_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add dateTime field (TIMESTAMP)
+    // TODO: Add endDateTime field (TIMESTAMP)
+
+    // TODO: Add status field with @Enumerated(EnumType.STRING) and default "SCHEDULED"
+
+    // Many-to-one: AppointmentEntity -> ClientEntity (owning side)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CLIENT_ID")
+    private ClientEntity client;
+
+    // TODO: Add many-to-one relationship with TreatmentEntity
+    // Hint: Similar to client relationship above
+    // Use @ManyToOne with @JoinColumn("TREATMENT_ID")
+}
+----
+
+[NOTE]
+====
+*Think about it:* Why does AppointmentEntity have TWO many-to-one relationships while ClientEntity only has one-to-one? Consider the business logic: can a client have multiple appointments? Can each appointment reference multiple treatments?
+====
 
 === Testing Entity Mappings
 
-Create `EntitySmokeIT` to verify entity loading:
+Create `EntitySmokeIT` in `src/test/java` under `com.capgemini.training.appointmentbooking.dataaccess.entity` to verify entity loading:
 
 [source,java]
 ----
 @DataJpaTest(bootstrapMode = BootstrapMode.LAZY)
 class EntitySmokeIT {
-    
+
     @PersistenceContext
     private EntityManager em;
-    
+
     @Test
     void loadAllClasses() {
         // given
@@ -717,10 +925,40 @@ class EntitySmokeIT {
 
 [NOTE]
 ====
-*Think about it:* Why is this test valuable even though it seems simple? It validates that all entity mappings are correct and the database schema matches our entity definitions.
+*Think about it:* Why is this test valuable even though it seems simple? It validates that:
+- All entity mappings are correct
+- The database schema matches entity definitions
+- Sample data loaded successfully
+- Relationships are properly configured
+
+This is a smoke test - it doesn't test business logic, just that the foundation is solid.
+====
+
+[IMPORTANT]
+====
+*About transaction behavior in `@DataJpaTest`:*
+
+By default, `@DataJpaTest` wraps each test in a transaction and rolls back after completion. This means:
+- Your test data is never committed to the database
+- Tests don't interfere with each other
+- Tests run faster (no I/O)
+
+However, this also means database-specific constraints (like `CHECK` constraints) may not be validated properly in tests. Always add constraints to BOTH database AND entities for defense-in-depth validation.
 ====
 
 == Repository Layer
+
+Repositories provide data access operations for entities. Spring Data JPA offers multiple approaches for implementing them.
+
+=== Why Custom Repository Infrastructure?
+
+For simple CRUD operations, Spring's `JpaRepository` is sufficient. However, advanced queries often require direct `EntityManager` access for:
+- Criteria API queries
+- QueryDSL queries
+- Complex native SQL
+- Dynamic query construction
+
+Creating a custom base repository gives us this access pattern throughout the application.
 
 === Custom Repository Infrastructure
 
@@ -734,16 +972,21 @@ public interface BaseJpaRepository<T, ID> extends JpaRepository<T, ID> {
 }
 ----
 
+[NOTE]
+====
+The `@NoRepositoryBean` annotation tells Spring not to create a proxy for this interface - it's only meant to be extended, not used directly.
+====
+
 Implement the base repository:
 
 [source,java]
 ----
-public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
+public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID>
         implements BaseJpaRepository<T, ID> {
 
     private final EntityManager entityManager;
 
-    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation, 
+    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation,
                          EntityManager entityManager) {
         super(entityInformation, entityManager);
         this.entityManager = entityManager;
@@ -767,22 +1010,56 @@ Configure Spring to use custom repositories:
 public class DataaccessConfiguration {}
 ----
 
+[TIP]
+====
+Add this configuration to `com.capgemini.training.appointmentbooking.dataaccess.config` package. The `basePackages` setting tells Spring where to scan for repository interfaces.
+====
+
 === Repository Implementation
+
+Create the `AppointmentRepository` in `dataaccess.repository` package:
 
 [source,java]
 ----
 public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
-    // Basic CRUD operations inherited from JpaRepository
+    // Basic CRUD operations inherited:
+    // - save(entity)
+    // - findById(id)
+    // - findAll()
+    // - delete(entity)
+    // - deleteById(id)
+    // etc.
+
+    // TODO: Add custom query methods here
 }
+----
+
+[NOTE]
+====
+By extending `BaseJpaRepository`, `AppointmentRepository` automatically inherits all CRUD methods from `JpaRepository`, plus access to `EntityManager` for custom queries.
+====
+
+Create similar repositories for other entities:
+
+[source,java]
+----
+public interface UserRepository extends BaseJpaRepository<UserEntity, Long> {}
+
+public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {}
+
+public interface SpecialistRepository extends BaseJpaRepository<SpecialistEntity, Long> {}
+
+public interface TreatmentRepository extends BaseJpaRepository<TreatmentEntity, Long> {}
 ----
 
 === Testing Infrastructure
 
-Create base test classes:
+Create base test class with AssertJ support:
 
 [source,java]
 ----
 public class BaseTest implements WithAssertions {
+
     protected Instant toInstant(String date) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return LocalDateTime.parse(date, formatter)
@@ -792,25 +1069,37 @@ public class BaseTest implements WithAssertions {
 }
 ----
 
+Create base class for JPA integration tests:
+
 [source,java]
 ----
 @DataJpaTest
 @Import(DataaccessConfiguration.class)
 public class BaseDataJpaTest extends BaseTest {
-    // Provides JPA testing context with custom repository configuration
+    // Provides:
+    // - JPA testing context via @DataJpaTest
+    // - Automatic transaction support (and rollback)
+    // - Custom repository configuration via @Import
+    // - H2 in-memory database (pre-configured)
 }
 ----
 
 [IMPORTANT]
 ====
 `@DataJpaTest` provides:
-- Simplified Spring context with only JPA components
-- Automatic transaction rollback after each test
-- H2 in-memory database configuration
-- Fast test execution
+
+- **Simplified context**: Only JPA/database components loaded (faster startup)
+- **Automatic transactions**: Each test wrapped in transaction, rolled back after
+- **Isolated tests**: No test data leaks between tests
+- **H2 database**: Pre-configured in-memory database (no setup needed)
+- **Performance**: Tests run much faster than full `@SpringBootTest`
+
+Reference: https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/test/autoconfigure/orm/jpa/DataJpaTest.html
 ====
 
 === Repository Testing
+
+Create `AppointmentRepositoryIT` in `src/test/java`:
 
 [source,java]
 ----
@@ -832,98 +1121,273 @@ public class AppointmentRepositoryIT extends BaseDataJpaTest {
 
 [NOTE]
 ====
-*Think about it:* Why do we test repository methods when they're provided by Spring Data JPA? We're testing our configuration and ensuring our entities work correctly with the framework.
+We test repository configuration and basic operations, but not Spring framework code itself. The focus is on verifying:
+- Your entity mappings work with Spring Data
+- Custom repository configuration is correct
+- Entities load from database properly
 ====
 
 == Advanced Querying
 
-=== Query Method Types
+Spring Data JPA offers multiple approaches for custom queries. Choose based on complexity and team preference.
 
-Spring Data JPA offers multiple approaches for custom queries:
+=== Query Method Types Comparison
 
-==== 1. Spring Query Methods
+[cols="2,2,2,2"]
+|===
+| Method | Complexity | Type-Safety | Best For
 
-Method names are parsed to generate queries:
+| Spring Query Methods | Low | Medium | Simple filters, sorting
+| @Query Annotation | Medium | High | Well-defined queries
+| Named Queries | Medium | High | Reusable, testable queries
+| Criteria API | High | Very High | Complex, dynamic queries
+| QueryDSL | Medium | Very High | Complex queries with IDE support
+|===
 
-[source,java]
-----
-List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name);
-----
+=== 1. Spring Query Methods
 
-==== 2. @Query Annotation
-
-Custom JPQL queries:
-
-[source,java]
-----
-@Query("""
-        SELECT a FROM AppointmentEntity a
-        JOIN a.treatment t
-        WHERE t.specialist.id = :specialistId
-        AND a.dateTime < :date
-        ORDER BY a.dateTime DESC
-        """)
-List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(
-    @Param("specialistId") Long specialistId, 
-    @Param("date") Instant date);
-----
-
-==== 3. Named Queries
-
-Defined in entity classes:
+Method names parsed automatically to generate queries:
 
 [source,java]
 ----
-@NamedQuery(name = "SpecialistEntity.findBySpecialization",
-    query = "select s from SpecialistEntity s where specialization = :specialization")
-----
+// File: TreatmentRepository.java
+public interface TreatmentRepository extends BaseJpaRepository<TreatmentEntity, Long> {
 
-==== 4. Criteria API
+    // Returns treatments with name containing search term (case-insensitive)
+    List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name);
 
-Type-safe programmatic queries:
-
-[source,java]
-----
-default List<AppointmentEntity> findByCriteria(AppointmentCriteria criteria) {
-    CriteriaBuilder cb = getEntityManager().getCriteriaBuilder();
-    CriteriaQuery<AppointmentEntity> cq = cb.createQuery(AppointmentEntity.class);
-    Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
-    
-    List<Predicate> predicates = new ArrayList<>();
-    
-    if (criteria.status() != null) {
-        predicates.add(cb.equal(root.get("status"), criteria.status()));
-    }
-    
-    cq.where(predicates.toArray(new Predicate[0]));
-    return getEntityManager().createQuery(cq).getResultList();
+    // Returns treatments by specialist, ordered by name
+    List<TreatmentEntity> findAllBySpecialistOrderByName(SpecialistEntity specialist);
 }
 ----
 
-==== 5. QueryDSL
+Reference: https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods
 
-Fluent, type-safe query API:
+[NOTE]
+====
+*Think about it:* Spring Query Methods are convenient but become unwieldy with complexity. Method names like `findAllByStatusAndSpecialistIdAndDateTimeBetweenOrderByDateTimeDesc` are hard to read. When does it make sense to switch to `@Query`?
+====
+
+=== 2. @Query Annotation
+
+Explicit JPQL queries with parameter binding:
 
 [source,java]
 ----
-default List<ClientEntity> findByName(String firstName, String lastName) {
-    JPAQueryFactory queryFactory = new JPAQueryFactory(getEntityManager());
-    
-    QClientEntity client = QClientEntity.clientEntity;
-    QUserEntity user = QUserEntity.userEntity;
-    
-    return queryFactory
-            .selectFrom(client)
-            .leftJoin(client.user, user)
-            .where(user.firstName.eq(firstName)
-                    .and(user.lastName.eq(lastName)))
-            .fetch();
+// File: AppointmentRepository.java
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
+
+    @Query("""
+            SELECT a FROM AppointmentEntity a
+            JOIN a.treatment t
+            WHERE t.specialist.id = :specialistId
+            AND a.dateTime < :date
+            ORDER BY a.dateTime DESC
+            """)
+    List<AppointmentEntity> findPastAppointmentsBySpecialist(
+        @Param("specialistId") Long specialistId,
+        @Param("date") Instant date);
+}
+----
+
+[TIP]
+====
+- Use triple-quoted strings (Java 15+) for multi-line readability
+- `@Param` annotation maps method parameters to query placeholders
+- Use JPQL entity names and field names, not table/column names
+- For reference on JPQL syntax: https://docs.oracle.com/cd/E13171_01/toplink/CMP3PG/ejb3_langref.html
+====
+
+=== 3. Named Queries
+
+Defined on entity class, referenced by interface method:
+
+[source,java]
+----
+// File: SpecialistEntity.java
+@Entity
+@NamedQuery(name = "SpecialistEntity.findBySpecialization",
+    query = "SELECT s FROM SpecialistEntity s WHERE s.specialization = :specialization")
+public class SpecialistEntity extends BaseEntity {
+    // ...
+}
+----
+
+[source,java]
+----
+// File: SpecialistRepository.java
+public interface SpecialistRepository extends BaseJpaRepository<SpecialistEntity, Long> {
+
+    // Method name must match query name suffix (after entity name)
+    List<SpecialistEntity> findBySpecialization(Specialization specialization);
 }
 ----
 
 [NOTE]
 ====
-*Think about it:* When would you choose each query method? Consider factors like complexity, type safety, maintainability, and team expertise.
+Named queries are useful for:
+- Keeping queries close to entities
+- Reusing same query across multiple repositories
+- Separating complex query logic from repository interface
+
+However, they're less discoverable than `@Query` annotations in the repository.
+====
+
+=== 4. Criteria API
+
+Type-safe, programmatic query construction:
+
+[source,java]
+----
+// File: AppointmentCriteria.java (create in dataaccess.criteria package)
+public record AppointmentCriteria(
+    LocalDate startDate,
+    LocalDate endDate,
+    AppointmentStatus status,
+    Long clientId
+) {}
+----
+
+[source,java]
+----
+// File: AppointmentRepository.java
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
+
+    default List<AppointmentEntity> findByCriteria(AppointmentCriteria criteria) {
+        CriteriaBuilder cb = getEntityManager().getCriteriaBuilder();
+        CriteriaQuery<AppointmentEntity> cq = cb.createQuery(AppointmentEntity.class);
+        Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
+
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (criteria.status() != null) {
+            predicates.add(cb.equal(root.get("status"), criteria.status()));
+        }
+
+        if (criteria.clientId() != null) {
+            predicates.add(cb.equal(root.get("client").get("id"), criteria.clientId()));
+        }
+
+        // Add more predicates based on other criteria fields
+
+        cq.where(predicates.toArray(new Predicate[0]));
+        return getEntityManager().createQuery(cq).getResultList();
+    }
+}
+----
+
+[NOTE]
+====
+*Think about it:* Criteria API is verbose and type-safe. When would you choose it over `@Query`? Consider: dynamic query building, avoiding string concatenation, compile-time safety vs readability.
+====
+
+Reference: https://docs.oracle.com/javaee/7/tutorial/persistence-criteria.htm
+
+=== 5. QueryDSL
+
+Fluent, type-safe query builder with excellent IDE support:
+
+==== Setup
+
+Add dependencies to `pom.xml`:
+
+[source,xml]
+----
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-apt</artifactId>
+    <version>5.1.0</version>
+    <classifier>jakarta</classifier>
+    <scope>provided</scope>
+</dependency>
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-jpa</artifactId>
+    <classifier>jakarta</classifier>
+    <version>5.1.0</version>
+</dependency>
+----
+
+Add plugin to `<plugins>` section:
+
+[source,xml]
+----
+<plugin>
+    <groupId>com.mysema.maven</groupId>
+    <artifactId>apt-maven-plugin</artifactId>
+    <version>1.1.3</version>
+    <executions>
+        <execution>
+            <goals>
+                <goal>process</goal>
+            </goals>
+            <configuration>
+                <outputDirectory>target/generated-sources/java</outputDirectory>
+                <processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+----
+
+Then run: `mvn clean install`
+
+This generates Q-classes (e.g., `QAppointmentEntity`, `QClientEntity`) in `target/generated-sources/java`.
+
+==== Usage
+
+[source,java]
+----
+// File: ClientRepository.java
+public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {
+
+    default List<ClientEntity> findByName(String firstName, String lastName) {
+        JPAQueryFactory queryFactory = new JPAQueryFactory(getEntityManager());
+
+        QClientEntity client = QClientEntity.clientEntity;
+        QUserEntity user = QUserEntity.userEntity;
+
+        return queryFactory
+                .selectFrom(client)
+                .leftJoin(client.user, user)
+                .where(user.firstName.eq(firstName)
+                        .and(user.lastName.eq(lastName)))
+                .fetch();
+    }
+}
+----
+
+[source,java]
+----
+// File: ClientRepositoryIT.java - Testing QueryDSL
+public class ClientRepositoryIT extends BaseDataJpaTest {
+
+    @Autowired
+    private ClientRepository clientRepository;
+
+    @Test
+    void testFindByQueryDSL() {
+        // when
+        List<ClientEntity> clients = clientRepository.findByName("Stefan", "Kowalski");
+
+        // then
+        assertThat(clients).isNotEmpty().hasSize(1);
+        assertThat(clients.getFirst().getUser().getFirstName()).isEqualTo("Stefan");
+    }
+}
+----
+
+[IMPORTANT]
+====
+QueryDSL advantages:
+- IDE autocompletion for all query methods
+- Type-safe (compile-time checking)
+- Fluent, readable API
+- SQL-like structure with Java syntax
+
+Setup overhead is higher than other approaches. Choose for complex queries where type-safety and readability matter most.
+
+Reference: https://querydsl.com/
 ====
 
 == Exercises
@@ -932,84 +1396,156 @@ default List<ClientEntity> findByName(String firstName, String lastName) {
 
 Implement and test these queries:
 
-1. **Find treatments by partial name** (case-insensitive)
-   - Use Spring Query Methods
-   - Method signature: `List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name)`
+**1.1 Find treatments by partial name** (case-insensitive)
+- Use Spring Query Methods
+- Expected method signature: `List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name)`
+- Write test: should find treatments containing "Konsultacja"
 
-2. **Find past appointments for a specialist**
-   - Use `@Query` annotation with JOIN
-   - Include only appointments before current date
-   - Exclude cancelled appointments
+**1.2 Find past appointments for a specialist**
+- Use `@Query` annotation with JOIN
+- Include only appointments before current date
+- Exclude cancelled appointments
+- Parameters: specialistId (Long), currentDate (Instant)
 
 === Exercise 2: Advanced Queries
 
-Implement these more complex queries:
+Implement these queries and write tests for each:
 
-1. **Find appointments by time period and status** - Spring Query Methods
-2. **Find conflicting appointments** - `@Query` (exclude CANCELLED status)
-3. **Find treatment by name** - Named Query
-4. **Find treatments by name and specialization** - QueryDSL
-5. **Find appointment history** - Criteria API
+**2.1 Find appointments by time period and status** - Use Spring Query Methods
+- Parameters: startDateTime, endDateTime, status
+- Hint: Method name could be `findByDateTimeBetweenAndStatus`
 
-[IMPORTANT]
+**2.2 Find conflicting appointments** - Use `@Query`
+- Find appointments for a specialist in given time range
+- Exclude CANCELLED status
+- Parameters: specialistId, appointmentStartTime, appointmentEndTime
+- Hint: You'll need to JOIN through Treatment to Specialist
+
+**2.3 Find treatment by name** - Use Named Query
+- Single parameter: treatment name (exact match)
+- Implement: annotation on TreatmentEntity + method in TreatmentRepository
+
+**2.4 Find treatments by specialization** - Use QueryDSL
+- Parameters: specialization
+- Must join with SpecialistEntity
+- Expected: treatments provided by specialists in given field
+
+**2.5 Find appointment history for a client** - Use Criteria API
+- Create `AppointmentHistoryCriteria` record with optional filters
+- Parameters: clientId (required), status (optional), fromDate (optional)
+- Return: all matching appointments ordered by date descending
+
+[TIP]
 ====
-Remember to:
-- Write comprehensive tests for each query
-- Handle edge cases (null parameters, empty results)
-- Consider performance implications
-- Document complex query logic
+When implementing exercises:
+1. Write the query/method first
+2. Write a test that calls it
+3. Run test to verify it works
+4. Commit before moving to next exercise
+
+This test-first approach catches errors immediately rather than discovering them later.
 ====
 
 == Troubleshooting Common Issues
 
 === IllegalStateException: Failed to load ApplicationContext
 
-**Cause**: Query compilation errors detected at runtime
+**Symptom**: Test fails immediately on startup; mentions query errors
 
-**Solution**: 
-- Check JPQL syntax carefully
-- Verify entity and field names
-- Ensure proper parameter binding
+**Cause**: Query compilation errors detected at application startup
+
+**Solution**:
+- Check JPQL syntax carefully (entity names, field names, keywords)
+- Verify parameter names match `@Param` annotations
+- Ensure relationships exist and are properly mapped
+- Check query in IDE for syntax highlighting errors
+
+[TIP]
+====
+Copy your JPQL into the application logs carefully - error messages often point to exact syntax issues.
+====
 
 === LazyInitializationException
+
+**Symptom**: `Exception: could not initialize proxy - no Session`
 
 **Cause**: Accessing lazy-loaded associations outside transaction context
 
 **Solution**:
-- Use `@Transactional` on service methods
-- Fetch required associations explicitly
-- Consider fetch strategies carefully
+- Add `@Transactional` to service methods that need to load associations
+- Explicitly fetch required associations in query: `LEFT JOIN FETCH a.user`
+- Consider eagerly loading frequently-needed associations (carefully!)
+
+[source,java]
+----
+// Wrong - association not loaded
+AppointmentEntity appt = appointmentRepository.findById(id).orElse(null);
+String clientName = appt.getClient().getUser().getFirstName(); // Fails!
+
+// Right - fetch association in query
+@Query("SELECT a FROM AppointmentEntity a LEFT JOIN FETCH a.client c LEFT JOIN FETCH c.user WHERE a.id = :id")
+Optional<AppointmentEntity> findByIdWithClient(@Param("id") Long id);
+----
+
+=== NoSuchElementException: Unable to parse binding parameter
+
+**Symptom**: Test runs but @Query fails with binding parameter error
+
+**Cause**: Parameter name in query doesn't match `@Param` annotation
+
+**Solution**:
+- Check spelling: `@Param("specialistId")` must match `:specialistId` in query
+- Query parameters are case-sensitive
+- All placeholders must have corresponding `@Param` annotations
+
+=== Performance - N+1 Query Problem
+
+**Symptom**: For 100 appointments, you see 101 SQL queries in logs
+
+**Cause**: Loading collection (e.g., appointments) triggers separate query per item
+
+**Solution**:
+- Use `JOIN FETCH` in queries to load associations eagerly
+- Set appropriate `fetch = FetchType.LAZY` on relationships (default)
+- Use Criteria API to explicitly fetch needed data
+- Add proper indexes on foreign key columns
 
 [WARNING]
 ====
-JPA queries are validated at runtime, not compile-time. Always test your custom queries thoroughly to catch errors early.
+JPA queries are validated at runtime, not compile-time. Always test custom queries thoroughly to catch errors early. Enable SQL logging in tests to verify queries are efficient.
 ====
 
 == Best Practices Summary
 
-1. **Entity Design**:
-   - Use `@MappedSuperclass` for common fields
-   - Implement proper equals/hashCode for entities
-   - Choose appropriate fetch strategies
+=== Entity Design
+- Use `@MappedSuperclass` for common audit fields
+- Choose fetch strategies deliberately (LAZY by default)
+- Implement `equals()`/`hashCode()` using ID fields
+- Avoid circular bidirectional relationships if possible
 
-2. **Repository Design**:
-   - Extend custom base repository for EntityManager access
-   - Use appropriate query method for each use case
-   - Write comprehensive integration tests
+=== Repository Design
+- Extend custom base repository for EntityManager access
+- Use appropriate query method for each use case
+- Write comprehensive integration tests with `@DataJpaTest`
+- Consider team expertise when choosing query style
 
-3. **Performance Considerations**:
-   - Create indexes on frequently queried columns
-   - Use lazy loading appropriately
-   - Consider query complexity and N+1 problems
+=== Performance Considerations
+- Create indexes on all foreign key columns
+- Use lazy loading by default, eager only when necessary
+- Write efficient queries (avoid SELECT *)
+- Test with realistic data volumes
 
-4. **Testing**:
-   - Use `@DataJpaTest` for repository tests
-   - Test both positive and negative scenarios
-   - Verify query performance with realistic data volumes
+=== Testing Best Practices
+- Use `@DataJpaTest` for repository tests (faster than `@SpringBootTest`)
+- Test both positive and negative scenarios
+- Verify query performance with realistic data
+- Use `toInstant()` helper for timestamp testing
 
 [NOTE]
 ====
-*Think about it:* How does proper data access layer design contribute to overall application maintainability and performance? Consider the impact on testing, debugging, and future feature development.
+*Think about it:* How does a well-designed data access layer contribute to overall application quality? Consider impact on testing, debugging, maintenance, and future feature development.
+
+What architectural patterns have you noticed emerging from this design? How would you extend this to handle more complex scenarios like auditing, soft deletes, or partitioning?
 ====
 
 == Navigation
