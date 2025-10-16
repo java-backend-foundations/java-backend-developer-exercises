@@ -231,7 +231,13 @@ return ResponseEntity.status(HttpStatus.CREATED).body(treatmentMapper.toApiTreat
 ----
 
 If a treatment is not found, return a `404 Not Found` response.
-If an error occurs during the operation, return a `500 Internal Server Error` response with an appropriate error message. Refer the Openapi specification to ensure the metyhods return the correct HTTP status codes and response formats.
+If an error occurs during the operation, a `500 Internal Server Error` response will be returned by default. No extra error handling is needed in your controller methods, as unhandled exceptions will automatically result in a 500 response. For example, the following code is sufficient:
+
+    @Override
+    public ResponseEntity<List<Treatment>> getTreatments() {
+        List<Treatment> list = findTreatmentUc.findAll().stream().map(treatmentMapper::toApiTreatment).toList();
+        return ResponseEntity.ok(list);
+    }
 
 You can also check the generated inferfaces for the `AppointmentApi` and `TreatmentApi` to see the expected request and response formats.
 
