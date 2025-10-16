@@ -59,8 +59,9 @@ Each entity includes these standard fields:
 Understanding these relationships is crucial for proper database design:
 
 ==== One-to-One Relationships
-* **User ↔ Client**: Each user can optionally be a client
-* **User ↔ Specialist**: Each user can optionally be a specialist
+
+ * **User ↔ Client**: Each user can optionally be a client
+ * **User ↔ Specialist**: Each user can optionally be a specialist
 
 [IMPORTANT]
 ====
@@ -68,9 +69,10 @@ A user can be both a client and a specialist simultaneously. For example, a doct
 ====
 
 ==== One-to-Many Relationships
-* **Specialist → Treatments**: One specialist provides multiple treatments
-* **Client → Appointments**: One client can book multiple appointments
-* **Treatment → Appointments**: One treatment can have multiple appointments
+
+ * **Specialist → Treatments**: One specialist provides multiple treatments
+ * **Client → Appointments**: One client can book multiple appointments
+ * **Treatment → Appointments**: One treatment can have multiple appointments
 
 ==== Bidirectional Relationships
 Only `Client ↔ Appointment` and `Specialist ↔ Treatment` relationships are bidirectional, allowing navigation in both directions.
@@ -114,9 +116,9 @@ Add the following dependencies to your `pom.xml` inside the `<dependencies>` sec
 
 === Why These Dependencies?
 
-* **spring-boot-starter-data-jpa** — Integrates Spring Data JPA and Hibernate, making persistence and repository use easy
-* **H2** — Provides an in-memory relational database, perfect for demos and testing where no external DB is needed
-* **Flyway** — Enables controlled, versioned database schema migrations to manage changes over time
+ * **spring-boot-starter-data-jpa** — Integrates Spring Data JPA and Hibernate, making persistence and repository use easy
+ * **H2** — Provides an in-memory relational database, perfect for demos and testing where no external DB is needed
+ * **Flyway** — Enables controlled, versioned database schema migrations to manage changes over time
 
 === Verify Integration
 
@@ -126,9 +128,9 @@ After adding dependencies, reload your Maven project (e.g., "Reimport Maven Proj
 ====
 *About Dependency Versions:* You don't see explicit `<version>` tags because the parent project `spring-boot-starter-parent` manages tested dependency versions via its `<dependencyManagement>` section. This approach ensures:
 
-* Consistent, compatible versions across all Spring Boot dependencies
-* Simplified maintenance during upgrades  
-* Clean, shorter pom.xml with fewer version conflicts
+ * Consistent, compatible versions across all Spring Boot dependencies
+ * Simplified maintenance during upgrades  
+ * Clean, shorter pom.xml with fewer version conflicts
 
 If you need to override a dependency's version (for example, to test a newer Flyway), you can add the `<version>` element explicitly — but keep this only for special cases.
 ====
@@ -137,10 +139,10 @@ If you need to override a dependency's version (for example, to test a newer Fly
 ====
 After adding these dependencies, your application will have access to:
 
-* JPA annotations (`@Entity`, `@Table`, `@Id`, etc.)
-* Repository interfaces (`JpaRepository`, `CrudRepository`)
-* H2 database console at `/h2-console`
-* Automatic Flyway migration execution on startup
+ * JPA annotations (`@Entity`, `@Table`, `@Id`, etc.)
+ * Repository interfaces (`JpaRepository`, `CrudRepository`)
+ * H2 database console at `/h2-console`
+ * Automatic Flyway migration execution on startup
 ====
 
 == Database Configuration
@@ -148,8 +150,9 @@ After adding these dependencies, your application will have access to:
 === Technology Stack
 
 We'll use:
-* **H2 Database**: In-memory database perfect for development and testing
-* **Flyway**: Database migration tool for version control of schema changes
+
+ * **H2 Database**: In-memory database perfect for development and testing
+ * **Flyway**: Database migration tool for version control of schema changes
 
 [WARNING]
 ====
@@ -198,10 +201,10 @@ spring.jpa.show-sql=true
 
 With `ddl-auto=none` and Flyway active, you rely entirely on Flyway scripts to define and evolve the schema safely and reproducibly. This approach:
 
-* **Prevents conflicts** between Hibernate's automatic schema generation and Flyway migrations
-* **Ensures consistency** across different environments (dev, test, production)
-* **Provides version control** for all database changes through migration files
-* **Enables rollback capabilities** and change tracking
+ * **Prevents conflicts** between Hibernate's automatic schema generation and Flyway migrations
+ * **Ensures consistency** across different environments (dev, test, production)
+ * **Provides version control** for all database changes through migration files
+ * **Enables rollback capabilities** and change tracking
 
 [WARNING]
 ====
@@ -212,10 +215,10 @@ Never use `ddl-auto=create` or `ddl-auto=create-drop` with Flyway in production!
 
 The `show-sql=true` setting displays all generated SQL queries in your application logs, which is invaluable for:
 
-* **Debugging** query performance issues
-* **Understanding** what Hibernate generates from your JPA queries
-* **Learning** how different JPA annotations translate to SQL
-* **Optimizing** database interactions
+ * **Debugging** query performance issues
+ * **Understanding** what Hibernate generates from your JPA queries
+ * **Learning** how different JPA annotations translate to SQL
+ * **Optimizing** database interactions
 
 
 === Accessing the H2 Console
@@ -337,11 +340,11 @@ CREATE TABLE APPLICATION_USER (
 
 ==== Field Explanations
 
-* **ID**: Primary key, auto-incremented via sequence
-* **VERSION**: JPA optimistic locking version
-* **EMAIL**: Unique identifier following RFC 5321 (max 254 characters)
-* **PASSWORD_HASH**: Secure password storage (never store plain text!)
-* **CREATED/LAST_UPDATED**: Audit timestamps with automatic defaults
+ * **ID**: Primary key, auto-incremented via sequence
+ * **VERSION**: JPA optimistic locking version
+ * **EMAIL**: Unique identifier following RFC 5321 (max 254 characters)
+ * **PASSWORD_HASH**: Secure password storage (never store plain text!)
+ * **CREATED/LAST_UPDATED**: Audit timestamps with automatic defaults
 
 [WARNING]
 ====
@@ -374,16 +377,17 @@ The `ON DELETE CASCADE` ensures that when a user is deleted, their client record
 
 **Exercise**: Create the SPECIALIST table following this specification:
 
-* **ID**: Primary key (NUMBER(19,0))
-* **VERSION**: Optimistic locking (INTEGER)
-* **USER_ID**: Foreign key to APPLICATION_USER (NUMBER(19,0))
-* **SPECIALIZATION**: Specialist's field of expertise (VARCHAR(128))
-* **CREATED/LAST_UPDATED**: Audit timestamps
+ * **ID**: Primary key (NUMBER(19,0))
+ * **VERSION**: Optimistic locking (INTEGER)
+ * **USER_ID**: Foreign key to APPLICATION_USER (NUMBER(19,0))
+ * **SPECIALIZATION**: Specialist's field of expertise (VARCHAR(128))
+ * **CREATED/LAST_UPDATED**: Audit timestamps
 
 Remember to include:
-* Primary key constraint
-* Foreign key constraint with `ON DELETE CASCADE`
-* Proper NOT NULL constraints
+
+ * Primary key constraint
+ * Foreign key constraint with `ON DELETE CASCADE`
+ * Proper NOT NULL constraints
 
 [TIP]
 ====
@@ -417,21 +421,22 @@ CREATE TABLE TREATMENT (
 
 **Exercise**: Create the APPOINTMENT table with these fields:
 
-* **ID**: Primary key (NUMBER(19,0))
-* **VERSION**: Optimistic locking (INTEGER)
-* **DATE_TIME**: Appointment start time (TIMESTAMP)
-* **END_DATE_TIME**: Appointment end time (TIMESTAMP)
-* **STATUS**: Appointment status (VARCHAR(32), default 'SCHEDULED')
-* **CLIENT_ID**: Foreign key to CLIENT (NUMBER(19,0))
-* **TREATMENT_ID**: Foreign key to TREATMENT (NUMBER(19,0))
-* **CREATED/LAST_UPDATED**: Audit timestamps
+ * **ID**: Primary key (NUMBER(19,0))
+ * **VERSION**: Optimistic locking (INTEGER)
+ * **DATE_TIME**: Appointment start time (TIMESTAMP)
+ * **END_DATE_TIME**: Appointment end time (TIMESTAMP)
+ * **STATUS**: Appointment status (VARCHAR(32), default 'SCHEDULED')
+ * **CLIENT_ID**: Foreign key to CLIENT (NUMBER(19,0))
+ * **TREATMENT_ID**: Foreign key to TREATMENT (NUMBER(19,0))
+ * **CREATED/LAST_UPDATED**: Audit timestamps
 
 Status values: `SCHEDULED`, `CANCELLED`, `COMPLETED`
 
 Constraints:
-* Primary key on ID
-* Foreign keys with `ON DELETE CASCADE` for both CLIENT_ID and TREATMENT_ID
-* Check constraint: END_DATE_TIME > DATE_TIME (see Constraint Checks section)
+
+ * Primary key on ID
+ * Foreign keys with `ON DELETE CASCADE` for both CLIENT_ID and TREATMENT_ID
+ * Check constraint: END_DATE_TIME > DATE_TIME (see Constraint Checks section)
 
 [TIP]
 ====
@@ -490,9 +495,10 @@ CREATE INDEX IDX_APPOINTMENT_TREATMENT ON APPOINTMENT(TREATMENT_ID);
 [IMPORTANT]
 ====
 Indexes on foreign keys are crucial for:
-- Faster JOIN operations
-- Preventing table locks during parent record updates/deletes
-- Improved query performance on filtered results
+
+ - Faster JOIN operations
+ - Preventing table locks during parent record updates/deletes
+ - Improved query performance on filtered results
 ====
 
 === Sample Data
@@ -503,11 +509,11 @@ To provide realistic test data for our application, create the migration file `s
 ====
 You can download the complete sample data from the file: link:V0002__Create_mockdata.sql[V0002__Create_mockdata.sql] or use the following structure:
 
-* **8 Users**: 4 clients and 4 specialists
-* **4 Clients**: Linked to the first 4 users
-* **4 Specialists**: With different specializations (Dentist, Cardiologist, Pediatrician, Orthopaedist)
-* **12 Treatments**: Medical procedures with realistic durations (30-180 minutes)
-* **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for testing
+ * **8 Users**: 4 clients and 4 specialists
+ * **4 Clients**: Linked to the first 4 users
+ * **4 Specialists**: With different specializations (Dentist, Cardiologist, Pediatrician, Orthopaedist)
+ * **12 Treatments**: Medical procedures with realistic durations (30-180 minutes)
+ * **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for testing
 ====
 
 [IMPORTANT]
@@ -545,9 +551,9 @@ Install the https://projectlombok.org/setup/overview[Lombok plugin in your IDE].
 
 Create these packages under `com.capgemini.training.appointmentbooking`:
 
-* `dataaccess.entity` - Entity classes
-* `dataaccess.converter` - JPA attribute converters
-* `common.datatype` - Enums and common types
+ * `dataaccess.entity` - Entity classes
+ * `dataaccess.converter` - JPA attribute converters
+ * `common.datatype` - Enums and common types
 
 === BaseEntity Implementation
 
@@ -589,8 +595,8 @@ public class BaseEntity {
 ====
 *Lifecycle methods explained:*
 
-* `@PrePersist` - Called just before the entity is saved for the first time (INSERT)
-* `@PreUpdate` - Called just before an existing entity is updated (UPDATE)
+ * `@PrePersist` - Called just before the entity is saved for the first time (INSERT)
+ * `@PreUpdate` - Called just before an existing entity is updated (UPDATE)
 
 Why no setters for `created` and `lastUpdated`? Because they should only be set automatically by the database lifecycle, never modified directly. The `@PrePersist` and `@PreUpdate` methods enforce this immutability through the framework.
 
@@ -716,9 +722,10 @@ public class SpecializationConverter implements AttributeConverter<Specializatio
 *Think about it:* Why use a custom converter instead of `@Enumerated`?
 
 With `@Enumerated`, you're limited to storing either the enum constant name or ordinal value. Custom converters let you:
-- Store the display name (e.g., "Dentist" instead of "DENTIST")
-- Control database format independently of Java enum changes
-- Implement custom serialization logic for complex transformations
+
+ - Store the display name (e.g., "Dentist" instead of "DENTIST")
+ - Control database format independently of Java enum changes
+ - Implement custom serialization logic for complex transformations
 
 However, `@Enumerated` is simpler for straightforward cases. Choose converters when you need custom control.
 ====
@@ -926,6 +933,7 @@ class EntitySmokeIT {
 [NOTE]
 ====
 *Think about it:* Why is this test valuable even though it seems simple? It validates that:
+
 - All entity mappings are correct
 - The database schema matches entity definitions
 - Sample data loaded successfully
@@ -939,24 +947,26 @@ This is a smoke test - it doesn't test business logic, just that the foundation 
 *About transaction behavior in `@DataJpaTest`:*
 
 By default, `@DataJpaTest` wraps each test in a transaction and rolls back after completion. This means:
+
 - Your test data is never committed to the database
 - Tests don't interfere with each other
 - Tests run faster (no I/O)
 
-However, this also means database-specific constraints (like `CHECK` constraints) may not be validated properly in tests. Always add constraints to BOTH database AND entities for defense-in-depth validation.
+However, this also means database-specific constraints (like `CHECK` constraints) may not be validated properly in tests. Always add constraints to BOTH database AND entities for *defense-in-depth* validation.
 ====
 
-== Repository Layer
+== Repositories
 
 Repositories provide data access operations for entities. Spring Data JPA offers multiple approaches for implementing them.
 
 === Why Custom Repository Infrastructure?
 
 For simple CRUD operations, Spring's `JpaRepository` is sufficient. However, advanced queries often require direct `EntityManager` access for:
-- Criteria API queries
-- QueryDSL queries
-- Complex native SQL
-- Dynamic query construction
+
+ - Criteria API queries
+ - QueryDSL queries
+ - Complex native SQL
+ - Dynamic query construction
 
 Creating a custom base repository gives us this access pattern throughout the application.
 
@@ -1088,11 +1098,11 @@ public class BaseDataJpaTest extends BaseTest {
 ====
 `@DataJpaTest` provides:
 
-- **Simplified context**: Only JPA/database components loaded (faster startup)
-- **Automatic transactions**: Each test wrapped in transaction, rolled back after
-- **Isolated tests**: No test data leaks between tests
-- **H2 database**: Pre-configured in-memory database (no setup needed)
-- **Performance**: Tests run much faster than full `@SpringBootTest`
+ - **Simplified context**: Only JPA/database components loaded (faster startup)
+ - **Automatic transactions**: Each test wrapped in transaction, rolled back after
+ - **Isolated tests**: No test data leaks between tests
+ - **H2 database**: Pre-configured in-memory database (no setup needed)
+ - **Performance**: Tests run much faster than full `@SpringBootTest`
 
 Reference: https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/test/autoconfigure/orm/jpa/DataJpaTest.html
 ====
@@ -1195,7 +1205,7 @@ public interface AppointmentRepository extends BaseJpaRepository<AppointmentEnti
 - Use triple-quoted strings (Java 15+) for multi-line readability
 - `@Param` annotation maps method parameters to query placeholders
 - Use JPQL entity names and field names, not table/column names
-- For reference on JPQL syntax: https://docs.oracle.com/cd/E13171_01/toplink/CMP3PG/ejb3_langref.html
+- For reference on JPQL syntax: https://thorben-janssen.com/jpql/
 ====
 
 === 3. Named Queries
@@ -1226,6 +1236,7 @@ public interface SpecialistRepository extends BaseJpaRepository<SpecialistEntity
 [NOTE]
 ====
 Named queries are useful for:
+
 - Keeping queries close to entities
 - Reusing same query across multiple repositories
 - Separating complex query logic from repository interface
@@ -1380,10 +1391,11 @@ public class ClientRepositoryIT extends BaseDataJpaTest {
 [IMPORTANT]
 ====
 QueryDSL advantages:
-- IDE autocompletion for all query methods
-- Type-safe (compile-time checking)
-- Fluent, readable API
-- SQL-like structure with Java syntax
+
+ - IDE autocompletion for all query methods
+ - Type-safe (compile-time checking)
+ - Fluent, readable API
+ - SQL-like structure with Java syntax
 
 Setup overhead is higher than other approaches. Choose for complex queries where type-safety and readability matter most.
 
@@ -1397,54 +1409,63 @@ Reference: https://querydsl.com/
 Implement and test these queries:
 
 **1.1 Find treatments by partial name** (case-insensitive)
+
 - Use Spring Query Methods
 - Expected method signature: `List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name)`
-- Write test: should find treatments containing "Konsultacja"
+- #*Write test:*# should find treatments containing "Konsultacja"
 
 **1.2 Find past appointments for a specialist**
+
 - Use `@Query` annotation with JOIN
 - Include only appointments before current date
 - Exclude cancelled appointments
 - Parameters: specialistId (Long), currentDate (Instant)
+- #*Write test:*# should find all past appointments belong to the correct specialist before now
 
 === Exercise 2: Advanced Queries
+
+[TIP]
+====
+When implementing exercises:
+
+1. Write the query/method first
+2. *Write a test* that calls it
+3. *Run test* to verify it works
+4. Commit before moving to next exercise
+
+This test-first approach catches errors immediately rather than discovering them later.
+====
 
 Implement these queries and write tests for each:
 
 **2.1 Find appointments by time period and status** - Use Spring Query Methods
+
 - Parameters: startDateTime, endDateTime, status
 - Hint: Method name could be `findByDateTimeBetweenAndStatus`
 
 **2.2 Find conflicting appointments** - Use `@Query`
+
 - Find appointments for a specialist in given time range
 - Exclude CANCELLED status
 - Parameters: specialistId, appointmentStartTime, appointmentEndTime
 - Hint: You'll need to JOIN through Treatment to Specialist
 
 **2.3 Find treatment by name** - Use Named Query
+
 - Single parameter: treatment name (exact match)
 - Implement: annotation on TreatmentEntity + method in TreatmentRepository
 
 **2.4 Find treatments by specialization** - Use QueryDSL
+
 - Parameters: specialization
 - Must join with SpecialistEntity
 - Expected: treatments provided by specialists in given field
 
 **2.5 Find appointment history for a client** - Use Criteria API
+
 - Create `AppointmentHistoryCriteria` record with optional filters
 - Parameters: clientId (required), status (optional), fromDate (optional)
 - Return: all matching appointments ordered by date descending
-
-[TIP]
-====
-When implementing exercises:
-1. Write the query/method first
-2. Write a test that calls it
-3. Run test to verify it works
-4. Commit before moving to next exercise
-
-This test-first approach catches errors immediately rather than discovering them later.
-====
 
 == Troubleshooting Common Issues
 
@@ -1455,10 +1476,11 @@ This test-first approach catches errors immediately rather than discovering them
 **Cause**: Query compilation errors detected at application startup
 
 **Solution**:
-- Check JPQL syntax carefully (entity names, field names, keywords)
-- Verify parameter names match `@Param` annotations
-- Ensure relationships exist and are properly mapped
-- Check query in IDE for syntax highlighting errors
+
+ - Check JPQL syntax carefully (entity names, field names, keywords)
+ - Verify parameter names match `@Param` annotations
+ - Ensure relationships exist and are properly mapped
+ - Check query in IDE for syntax highlighting errors
 
 [TIP]
 ====
@@ -1472,9 +1494,10 @@ Copy your JPQL into the application logs carefully - error messages often point 
 **Cause**: Accessing lazy-loaded associations outside transaction context
 
 **Solution**:
-- Add `@Transactional` to service methods that need to load associations
-- Explicitly fetch required associations in query: `LEFT JOIN FETCH a.user`
-- Consider eagerly loading frequently-needed associations (carefully!)
+
+ - Add `@Transactional` to service methods that need to load associations
+ - Explicitly fetch required associations in query: `LEFT JOIN FETCH a.user`
+ - Consider eagerly loading frequently-needed associations (carefully!)
 
 [source,java]
 ----
@@ -1494,9 +1517,10 @@ Optional<AppointmentEntity> findByIdWithClient(@Param("id") Long id);
 **Cause**: Parameter name in query doesn't match `@Param` annotation
 
 **Solution**:
-- Check spelling: `@Param("specialistId")` must match `:specialistId` in query
-- Query parameters are case-sensitive
-- All placeholders must have corresponding `@Param` annotations
+
+ - Check spelling: `@Param("specialistId")` must match `:specialistId` in query
+ - Query parameters are case-sensitive
+ - All placeholders must have corresponding `@Param` annotations
 
 === Performance - N+1 Query Problem
 
@@ -1505,10 +1529,11 @@ Optional<AppointmentEntity> findByIdWithClient(@Param("id") Long id);
 **Cause**: Loading collection (e.g., appointments) triggers separate query per item
 
 **Solution**:
-- Use `JOIN FETCH` in queries to load associations eagerly
-- Set appropriate `fetch = FetchType.LAZY` on relationships (default)
-- Use Criteria API to explicitly fetch needed data
-- Add proper indexes on foreign key columns
+
+ - Use `JOIN FETCH` in queries to load associations eagerly
+ - Set appropriate `fetch = FetchType.LAZY` on relationships (default)
+ - Use Criteria API to explicitly fetch needed data
+ - Add proper indexes on foreign key columns
 
 [WARNING]
 ====
@@ -1518,28 +1543,32 @@ JPA queries are validated at runtime, not compile-time. Always test custom queri
 == Best Practices Summary
 
 === Entity Design
-- Use `@MappedSuperclass` for common audit fields
-- Choose fetch strategies deliberately (LAZY by default)
-- Implement `equals()`/`hashCode()` using ID fields
-- Avoid circular bidirectional relationships if possible
+
+ - Use `@MappedSuperclass` for common audit fields
+ - Choose fetch strategies deliberately (LAZY by default)
+ - Implement `equals()`/`hashCode()` using ID fields
+ - Avoid circular bidirectional relationships if possible
 
 === Repository Design
-- Extend custom base repository for EntityManager access
-- Use appropriate query method for each use case
-- Write comprehensive integration tests with `@DataJpaTest`
-- Consider team expertise when choosing query style
+
+ - Extend custom base repository for EntityManager access
+ - Use appropriate query method for each use case
+ - Write comprehensive integration tests with `@DataJpaTest`
+ - Consider team expertise when choosing query style
 
 === Performance Considerations
-- Create indexes on all foreign key columns
-- Use lazy loading by default, eager only when necessary
-- Write efficient queries (avoid SELECT *)
-- Test with realistic data volumes
+
+ - Create indexes on all foreign key columns
+ - Use lazy loading by default, eager only when necessary
+ - Write efficient queries (avoid SELECT *)
+ - Test with realistic data volumes
 
 === Testing Best Practices
-- Use `@DataJpaTest` for repository tests (faster than `@SpringBootTest`)
-- Test both positive and negative scenarios
-- Verify query performance with realistic data
-- Use `toInstant()` helper for timestamp testing
+
+ - Use `@DataJpaTest` for repository tests (faster than `@SpringBootTest`)
+ - Test both positive and negative scenarios
+ - Verify query performance with realistic data
+ - Use `toInstant()` helper for timestamp testing
 
 [NOTE]
 ====
