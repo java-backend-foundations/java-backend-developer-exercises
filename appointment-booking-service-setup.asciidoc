@@ -127,6 +127,8 @@ Exposing all actuator endpoints (`*`) should only be used in development environ
 mvn spring-boot:run
 ----
 +
+See <<intellij-vs-maven>> for a detailed comparison of IntelliJ and Maven run methods.
++
 Initially, you'll see output similar to this:
 +
 [source,console]
@@ -269,6 +271,71 @@ Your trainer will provide access to the Student Repository for implementing solu
 ====
 *Think about it:* What are the benefits of working on a shared codebase versus individual repositories? How does this simulate real-world development practices?
 ====
+
+== Appendix
+
+[[intellij-vs-maven]]
+=== 🆚 IntelliJ Run Config vs mvn spring-boot:run
+
+This section compares *two common ways to run Spring Boot applications* during development.
+
+[cols="1,1,1", options="header"]
+|===
+| Feature / Aspect
+| IntelliJ Run Configuration
+| `mvn spring-boot:run`
+
+| Startup Speed
+| ✅ Faster (direct class execution, no Maven overhead)
+| ❌ Slightly slower (starts Maven, resolves plugins/deps)
+
+| Build Process
+| Uses IntelliJ’s internal compiler
+| Uses Maven’s build lifecycle (`compile`, `resources`, etc.)
+
+| JAR Packaging
+| ❌ Does not build JAR unless explicitly triggered
+| ❌ Does not build JAR either, but can be configured to do so
+
+| Dependency Resolution
+| Uses IntelliJ’s project model
+| Uses Maven’s dependency resolution
+
+| Profile & Property Management
+| Requires manual setup in Run Config
+| ✅ Easy via CLI flags (`-Dspring-boot.run.profiles=dev`)
+
+| Environment Independence
+| IDE-dependent
+| ✅ Works anywhere Maven is installed
+
+| Plugin Features (e.g., layering)
+| ❌ Not available
+| ✅ Available via plugin configuration
+
+| Debugging Support
+| ✅ Full IDE debugging support
+| ❌ Limited unless run with debug flags
+
+| Hot Reload / DevTools
+| ✅ Fully supported
+| ✅ Supported
+
+| Consistency Across Team
+| ❌ Depends on each developer’s IDE setup
+| ✅ Consistent via shared `pom.xml`
+
+| CI/CD Compatibility
+| ❌ Not suitable
+| ✅ Ideal for automation and pipelines
+
+| Customization via `pom.xml`
+| ❌ Not applicable
+| ✅ Fully customizable
+|===
+
+To summarize: use IntelliJ for fast local development and debugging, and `mvn spring-boot:run` for consistent, portable execution across environments.
+
 
 == Navigation
 
