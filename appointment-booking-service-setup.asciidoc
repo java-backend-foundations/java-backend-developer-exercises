@@ -252,11 +252,113 @@ Actuator endpoints provide production-ready features:
 *Think about it:* How could you use these actuator endpoints in a production environment? What information would be most valuable for operations teams?
 ====
 
+=== Optional: Adding Code Formatting with Spotless (Recommended)
+
+To maintain consistent code formatting across your project and team, consider adding the Spotless Maven plugin. This plugin automatically formats your code and ensures build failures when formatting standards aren't met.
+
+==== Benefits of Using Spotless
+
+* *Consistent Code Style:* Enforces uniform formatting across all team members
+* *Automated Cleanup:* Removes unused imports and applies standard formatting
+* *Build Integration:* Fails builds when code doesn't meet formatting standards
+* *IDE Independence:* Works regardless of individual IDE settings
+* *Reduced Code Review Overhead:* Eliminates formatting discussions in pull requests
+
+==== Configuration
+
+Add the Spotless plugin to your `pom.xml` in the `<build><plugins>` section, alongside the existing Spring Boot Maven plugin:
+
+[source,xml]
+----
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+        </plugin>
+        
+        <!-- Add Spotless plugin here -->
+        <plugin>
+            <groupId>com.diffplug.spotless</groupId>
+            <artifactId>spotless-maven-plugin</artifactId>
+            <version>2.43.0</version> <!-- you can try to update to the newest version and then adjust configuration accordingly -->
+            <configuration>
+                <java>
+                    <removeUnusedImports/>
+                    <eclipse/>
+                </java>
+            </configuration>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>check</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
+----
+
+*Why in the `<build><plugins>` section?*
+
+* Maven plugins belong in the build configuration section
+* The `<executions>` block with `<goal>check</goal>` runs automatically during the `verify` phase
+* This ensures formatting validation occurs before packaging and deployment
+
+==== Usage Commands
+
+* *Check formatting:* `mvn spotless:check` - Verifies code formatting without making changes
+* *Apply formatting:* `mvn spotless:apply` - Automatically formats all Java files
+* *Build with formatting check:* `mvn clean verify` - Includes formatting validation in the build process
+
+[TIP]
+====
+Run `mvn spotless:apply` before committing code to ensure your changes pass the CI pipeline formatting checks.
+====
+
 == Repository Setup and Collaboration
 
 *Congratulations!* Your Spring Boot application is now ready for development.
 
 Your trainer will provide access to the Student Repository for implementing solutions during the Java Backend Developer course.
+
+=== What's Already Provided in the Student Repository
+
+When you clone the Student Repository, you'll find several pre-configured files to help you get started:
+
+==== 1. README.md
+The repository includes a comprehensive README.md file with:
+
+* *Project Overview* - Contains links to two additional repositories:
+  - Instructions repository with detailed exercise descriptions
+  - Reference implementation repository with complete solution examples
+
+image::images/setup/student-repo-readme.png[Student Repository README]
+
+==== 2. CI/CD Pipeline Configuration (.github/workflows/ci.yml)
+A pre-configured GitHub Actions workflow that provides automated build and test execution
+on pushes to `solution/**` branches and pull requests to `main` or `solution/**` branches.
+
+[IMPORTANT]
+====
+*GitHub Actions Free Tier Limitation:* The CI pipeline should be modified carefully (if at all) as GitHub Actions provides only 2,000 minutes per month for private repositories on the GitHub Free plan for organizations.
+====
+
+*What this CI configuration means:*
+
+* *Triggers:* Runs automatically when you push to any `solution/**` branch or create pull requests
+* *Environment:* Uses Ubuntu with JDK 21 and Maven dependency caching for faster builds
+* *Build Process:* Executes `mvn clean verify` to compile, test, and package your application
+* *Test Reporting:* Generates HTML test reports and uploads them as artifacts for 7 days
+* *Always Runs:* Test report generation occurs even if tests fail, helping with debugging
+
+==== 3. OpenAPI Specification (api/openapi.yml)
+The repository includes a complete OpenAPI specification file.
+
+This specification will be essential for the API development exercises in later training modules, where you'll implement the endpoints according to this contract.
+
+=== Getting Started
 
 . Clone the repository to your local machine (e.g., `C:\trainings\java-backend-developer-student`)
 . Copy all files from your Spring Boot application to the cloned repository
