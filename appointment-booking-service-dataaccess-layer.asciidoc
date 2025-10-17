@@ -984,6 +984,27 @@ By default, `@DataJpaTest` wraps each test in a transaction and rolls back after
 However, this also means database-specific constraints (like `CHECK` constraints) may not be validated properly in tests. Always add constraints to BOTH database AND entities for *defense-in-depth* validation.
 ====
 
+== End of Exercise Block 1
+
+[IMPORTANT]
+====
+**Checkpoint: Save Your Progress**
+
+Congratulations! You've completed the first exercise block covering database setup, schema creation, and entity mapping. This is a good time to save your work:
+
+1. **Commit your changes** to your working branch with a descriptive message
+2. **Push your changes** to the remote repository
+3. **Create a Pull Request** from your working branch to your solution branch
+4. **Compare your implementation** with the reference solution available in the solution repository on branch `feature/2-dataaccess` (your trainer will provide access)
+
+This allows you to:
+
+- Secure your progress before moving to the next section
+- Review differences between your approach and the reference implementation
+- Learn alternative solutions and best practices
+- Get feedback from your team during code review
+====
+
 == Repositories
 
 Repositories provide data access operations for entities. Spring Data JPA offers multiple approaches for implementing them.
@@ -1446,10 +1467,10 @@ Implement and test these queries:
 **1.2 Find past appointments for a specialist**
 
 - Use `@Query` annotation with JOIN
-- Include only appointments before current date
+- Include only appointments before the current date (or any other date)
 - Exclude cancelled appointments
 - Parameters: specialistId (Long), currentDate (Instant)
-- #*Write test:*# should find all past appointments belong to the correct specialist before now
+- #*Write test:*# should find all past appointments belong to the correct specialist before some specific date
 
 === Exercise 2: Advanced Queries
 
