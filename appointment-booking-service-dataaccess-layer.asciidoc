@@ -248,18 +248,18 @@ You should see this in your application logs:
 
 === Database Schema Design
 
-Our schema follows these design principles:
+Our schema is following (all tables have ID, VERSION for optimistic locking and audit columns: CREATED and LAST_UPDATED columns, some of them are omitted for some of the tables for the sake of readability):
 
 [plantuml, database-schema, svg]
 ----
 @startuml
 entity APPLICATION_USER {
-  *ID : NUMBER(19,0)
+  *ID : BIGINT
   *VERSION : INTEGER
-  *EMAIL : VARCHAR(254) --RFC 5321
+  *EMAIL : VARCHAR(254)
   *PASSWORD_HASH : VARCHAR(128)
-  *FIRST_NAME : VARCHAR(128)
-  *LAST_NAME : VARCHAR(128)
+  *FIRST_NAME : VARCHAR(255)
+  *LAST_NAME : VARCHAR(255)
   *CREATED : TIMESTAMP
   *LAST_UPDATED : TIMESTAMP
   --
@@ -267,37 +267,41 @@ entity APPLICATION_USER {
 }
 
 entity CLIENT {
-  *ID : NUMBER(19,0)
-  *USER_ID : NUMBER(19,0)
+  *ID : BIGINT
+  *USER_ID : BIGINT
+  ...
   --
   FK_USER_ID
 }
 
 entity SPECIALIST {
-  *ID : NUMBER(19,0)
-  *USER_ID : NUMBER(19,0)
+  *ID : BIGINT
+  *USER_ID : BIGINT
   *SPECIALIZATION : VARCHAR(128)
+  ...
   --
   FK_USER_ID
 }
 
 entity TREATMENT {
-  *ID : NUMBER(19,0)
-  *NAME : VARCHAR(128)
+  *ID : BIGINT
+  *NAME : VARCHAR(255)
   *DESCRIPTION : TEXT
   *DURATION_MINUTES : INTEGER
-  *SPECIALIST_ID : NUMBER(19,0)
+  *SPECIALIST_ID : BIGINT
+  ...
   --
   FK_SPECIALIST_ID
 }
 
 entity APPOINTMENT {
-  *ID : NUMBER(19,0)
+  *ID : BIGINT
   *DATE_TIME : TIMESTAMP
   *END_DATE_TIME : TIMESTAMP
   *STATUS : VARCHAR(32)
-  *CLIENT_ID : NUMBER(19,0)
-  *TREATMENT_ID : NUMBER(19,0)
+  *CLIENT_ID : BIGINT
+  *TREATMENT_ID : BIGINT
+  ...
   --
   FK_CLIENT_ID
   FK_TREATMENT_ID
@@ -307,7 +311,7 @@ APPLICATION_USER ||--|| CLIENT : is a
 APPLICATION_USER ||--|| SPECIALIST : is a
 SPECIALIST ||--o{ TREATMENT : provides
 CLIENT ||--o{ APPOINTMENT : books
-TREATMENT ||--o{ APPOINTMENT : includes
+TREATMENT ||--o{ APPOINTMENT : is scheduled as
 @enduml
 ----
 
@@ -325,15 +329,14 @@ Flyway migration files must follow the naming convention: `V<version>__<descript
 [source,sql]
 ----
 CREATE TABLE APPLICATION_USER (
-    ID NUMBER(19,0) NOT NULL,
+    ID BIGINT NOT NULL PRIMARY KEY,
     VERSION INTEGER NOT NULL,
     EMAIL VARCHAR(254) NOT NULL,
     PASSWORD_HASH VARCHAR(128) NOT NULL,
-    FIRST_NAME VARCHAR(128) NOT NULL,
-    LAST_NAME VARCHAR(128) NOT NULL,
+    FIRST_NAME VARCHAR(255) NOT NULL,
+    LAST_NAME VARCHAR(255) NOT NULL,
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (ID),
     CONSTRAINT UNIQUE_USER_EMAIL UNIQUE (EMAIL)
 );
 ----
@@ -361,9 +364,9 @@ We use `APPLICATION_USER` instead of `USER` because `USER` is a reserved word in
 [source,sql]
 ----
 CREATE TABLE CLIENT (
-    ID NUMBER(19,0) NOT NULL,
+    ID BIGINT NOT NULL,
     VERSION INTEGER NOT NULL,
-    USER_ID NUMBER(19,0) NOT NULL,
+    USER_ID BIGINT NOT NULL,
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (ID),
@@ -377,9 +380,9 @@ The `ON DELETE CASCADE` ensures that when a user is deleted, their client record
 
 **Exercise**: Create the SPECIALIST table following this specification:
 
- * **ID**: Primary key (NUMBER(19,0))
+ * **ID**: Primary key (BIGINT)
  * **VERSION**: Optimistic locking (INTEGER)
- * **USER_ID**: Foreign key to APPLICATION_USER (NUMBER(19,0))
+ * **USER_ID**: Foreign key to APPLICATION_USER (BIGINT)
  * **SPECIALIZATION**: Specialist's field of expertise (VARCHAR(128))
  * **CREATED/LAST_UPDATED**: Audit timestamps
 
@@ -399,18 +402,23 @@ Use the CLIENT table structure as a reference. The SPECIALIST table follows the 
 [source,sql]
 ----
 CREATE TABLE TREATMENT (
-    ID NUMBER(19,0) NOT NULL,
+    ID BIGINT NOT NULL PRIMARY KEY,
     VERSION INTEGER NOT NULL,
-    NAME VARCHAR(128) NOT NULL,
+    NAME VARCHAR(512) NOT NULL,
     DESCRIPTION TEXT,
     DURATION_MINUTES INTEGER NOT NULL,
-    SPECIALIST_ID NUMBER(19,0) NOT NULL,
+    SPECIALIST_ID BIGINT NOT NULL,
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (ID),
     FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID) ON DELETE CASCADE
 );
 ----
+
+==== Some field Explanations
+
+* **NAME**: Name of the treatment. Real treatment names in healthcare systems can be very specific and long.
+* **DESCRIPTION **: TEXT is in PostgreSQL native unbounded text type (better than CLOB). Descriptions of actual treatments in healthcare systems often exceed 400 characters and vary significantly in length
+(need more space: contraindications, procedures, aftercare instructions).
 
 [NOTE]
 ====
@@ -421,13 +429,13 @@ CREATE TABLE TREATMENT (
 
 **Exercise**: Create the APPOINTMENT table with these fields:
 
- * **ID**: Primary key (NUMBER(19,0))
+ * **ID**: Primary key (BIGINT)
  * **VERSION**: Optimistic locking (INTEGER)
  * **DATE_TIME**: Appointment start time (TIMESTAMP)
  * **END_DATE_TIME**: Appointment end time (TIMESTAMP)
  * **STATUS**: Appointment status (VARCHAR(32), default 'SCHEDULED')
- * **CLIENT_ID**: Foreign key to CLIENT (NUMBER(19,0))
- * **TREATMENT_ID**: Foreign key to TREATMENT (NUMBER(19,0))
+ * **CLIENT_ID**: Foreign key to CLIENT (BIGINT)
+ * **TREATMENT_ID**: Foreign key to TREATMENT (BIGINT)
  * **CREATED/LAST_UPDATED**: Audit timestamps
 
 Status values: `SCHEDULED`, `CANCELLED`, `COMPLETED`
@@ -509,9 +517,7 @@ Create indexes on foreign key columns for better query performance:
 ----
 CREATE INDEX IDX_CLIENT_USER ON CLIENT(USER_ID);
 CREATE INDEX IDX_SPECIALIST_USER ON SPECIALIST(USER_ID);
-CREATE INDEX IDX_TREATMENT_SPECIALIST ON TREATMENT(SPECIALIST_ID);
-CREATE INDEX IDX_APPOINTMENT_CLIENT ON APPOINTMENT(CLIENT_ID);
-CREATE INDEX IDX_APPOINTMENT_TREATMENT ON APPOINTMENT(TREATMENT_ID);
+-- write next indexes, in total should be 5
 ----
 
 [IMPORTANT]
