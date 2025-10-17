@@ -451,15 +451,37 @@ Create sequences for ID generation:
 ----
 CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
 CREATE SEQUENCE CLIENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
-CREATE SEQUENCE SPECIALIST_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
-CREATE SEQUENCE TREATMENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
-CREATE SEQUENCE APPOINTMENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
+-- Create the next required sequences. How many should there be in total?
 ----
 
 [NOTE]
 ====
-*Think about it:* Why do we increment by 100 instead of 1? This is related to JPA's sequence allocation optimization - can you research why this improves performance?
+*Think about it:* Why do we increment by 100 instead of 1?
+
+This is related to JPA's sequence allocation optimization. When using `@SequenceGenerator` in JPA (which will be covered in the next section), the `allocationSize` parameter defines how many IDs are preallocated and cached in memory. This reduces the number of database round-trips and improves performance, especially under high load.
+
+If the database sequence increments by 100, and JPA is configured with `allocationSize = 100`, each call to the sequence returns a new block of 100 IDs (e.g., 101–200, 201–300, etc.). JPA then uses these IDs in memory, one by one, without querying the database again until the block is exhausted.
+
+*Consider this:* What happens if the allocationSize in JPA is set to 1, but the database sequence increments by 100? You would see IDs like 101, 201, 301... — skipping 99 values each time. This is inefficient and leads to gaps.
+
+*Why must allocationSize match the DB sequence increment?*
+To ensure consistency and avoid ID gaps or collisions, especially in distributed systems with multiple application instances. If they don’t match, JPA may either:
+- Skip IDs unnecessarily.
+- Reuse IDs (in worst-case scenarios).
+- Cause confusion when debugging or analyzing data.
+
+*What if the application crashes before using all allocated IDs?*
+Some IDs may be lost, but this is acceptable in most cases since primary keys are meant to be unique, not necessarily sequential.
+
+*What if you have multiple server instances sharing the same database?*
+Each instance will request its own block of IDs. Matching allocationSize and sequence increment ensures that each instance gets a distinct, non-overlapping range, avoiding collisions.
+
+*What does NOCYCLE mean?*
+It ensures that the sequence never wraps around when it reaches its maximum value. This guarantees uniqueness and prevents accidental reuse of IDs.
+
+In the next section, <<entity-implementation>>, we will configure JPA entities to use these sequences properly using `@SequenceGenerator`.
 ====
+
 
 === Constraint Checks
 
@@ -525,6 +547,7 @@ The END_DATE_TIME should be calculated as: DATE_TIME + DURATION_MINUTES. This en
 
 After creating the migration file, run your application and verify the data is inserted correctly using the H2 Console.
 
+[[entity-implementation]]
 == Entity Implementation
 
 === Lombok Setup
@@ -1154,7 +1177,7 @@ Spring Data JPA offers multiple approaches for custom queries. Choose based on c
 | QueryDSL | Medium | Very High | Complex queries with IDE support
 |===
 
-=== 1. Spring Query Methods
+=== Spring Query Methods
 
 Method names parsed automatically to generate queries:
 
@@ -1178,7 +1201,7 @@ Reference: https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#j
 *Think about it:* Spring Query Methods are convenient but become unwieldy with complexity. Method names like `findAllByStatusAndSpecialistIdAndDateTimeBetweenOrderByDateTimeDesc` are hard to read. When does it make sense to switch to `@Query`?
 ====
 
-=== 2. @Query Annotation
+=== @Query Annotation
 
 Explicit JPQL queries with parameter binding:
 
@@ -1208,7 +1231,7 @@ public interface AppointmentRepository extends BaseJpaRepository<AppointmentEnti
 - For reference on JPQL syntax: https://thorben-janssen.com/jpql/
 ====
 
-=== 3. Named Queries
+=== Named Queries
 
 Defined on entity class, referenced by interface method:
 
@@ -1244,7 +1267,7 @@ Named queries are useful for:
 However, they're less discoverable than `@Query` annotations in the repository.
 ====
 
-=== 4. Criteria API
+=== Criteria API
 
 Type-safe, programmatic query construction:
 
@@ -1294,7 +1317,7 @@ public interface AppointmentRepository extends BaseJpaRepository<AppointmentEnti
 
 Reference: https://docs.oracle.com/javaee/7/tutorial/persistence-criteria.htm
 
-=== 5. QueryDSL
+=== QueryDSL
 
 Fluent, type-safe query builder with excellent IDE support:
 
