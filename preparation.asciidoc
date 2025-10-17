@@ -20,8 +20,9 @@ If you want to avoid problems during the training, please DO NOT use paths conta
 - *Git for Windows*: link:https://git-scm.com/download/win[Download]
 - *Apache Maven*: link:https://maven.apache.org/download.cgi[Download]
 - *JDK 21*:
+** For current recommendations, visit: link:https://whichjdk.com/[WhichJDK.com]
+** Recommended: Adoptium OpenJDK (*_Eclipse Temurin_*): link:https://adoptium.net/[Download]
 ** Oracle JDK: link:https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html[Download]
-** OpenJDK (Adoptium): link:https://adoptium.net/[Download]
 - *IDE (Choose One)*:
 ** IntelliJ IDEA (recommended): link:https://www.jetbrains.com/idea/download/#section=windows[Download]
 ** Eclipse: link:https://www.eclipse.org/downloads/[Download]
@@ -29,7 +30,8 @@ If you want to avoid problems during the training, please DO NOT use paths conta
 - *API client (Choose One) to test REST calls*:
 ** Postman: link:https://www.postman.com/downloads/[Download]
 ** Insomnia: link:https://insomnia.rest/download[Download]
-** or use HTTP client in IntelliJ (Ultimate only)
+** curl (command-line): Included with Git for Windows or install via Scoop
+** HTTP client in IntelliJ (Ultimate only)
 
 === Setup Instructions
 
@@ -42,7 +44,52 @@ If you want to avoid problems during the training, please DO NOT use paths conta
 
 Please follow the installation instructions on the download pages for each piece of software.
 
-=== Test the environment
+=== Alternative Installation (Without Admin Rights)
+
+If you don't have administrator privileges on your machine, you can use *Scoop* package manager to install the required software:
+
+==== Installing Scoop
+
+. Open PowerShell (no admin rights required)
+. Run the following command to install Scoop:
++
+[source,powershell]
+----
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+iwr -useb get.scoop.sh | iex
+----
+
+==== Installing Software with Scoop
+
+Once Scoop is installed, you can install the required tools:
+
+[source,powershell]
+----
+# Install Git
+scoop install git
+
+# Install Maven
+scoop install maven
+
+# Install JDK 21 (Eclipse Temurin)
+scoop bucket add java
+scoop install temurin21-jdk
+
+# Install additional tools (optional)
+scoop install postman
+
+# curl is included with Git, or install separately:
+scoop install curl
+----
+
+[NOTE]
+====
+Scoop installs software in your user directory (`%USERPROFILE%\scoop`), so no administrator privileges are required. It automatically manages PATH environment variables.
+====
+
+=== Verify Installation
+
+After installation (whether traditional or via Scoop), verify your environment:
 
 - Please open terminal and test the environment. The outputs below may differ from the outputs on your environment.
 - Please test the installed JDK version
@@ -82,7 +129,7 @@ Default locale: en, platform encoding: UTF-8
 OS name: "linux", version: "5.15.133.1-microsoft-standard-wsl2", arch: "amd64", family: "unix"
 --------
 --
-You should see the Maven version `3.8+`. Maven output should print the usage of the proper JDK version.
+You should see the Maven version `3.9+`. Maven output should print the usage of the proper JDK version.
 
 == Navigation
 [grid=cols]

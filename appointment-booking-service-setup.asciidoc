@@ -228,6 +228,70 @@ The `@SpringBootTest` annotation:
 *Think about it:* Why might this simple test be more valuable than it appears? What types of issues would cause this test to fail even though the method body is empty?
 ====
 
+=== Configuring Maven Test Plugins
+
+To ensure proper test execution and reporting in CI/CD environments, add the following Maven plugins to your `pom.xml` in the `<build><plugins>` section:
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <configuration>
+        <includes>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+        </includes>
+    </configuration>
+</plugin>
+
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <configuration>
+        <includes>
+            <include>**/*IT.java</include>
+        </includes>
+    </configuration>
+    <executions>
+        <execution>
+            <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-report-plugin</artifactId>
+    <configuration>
+        <outputDirectory>${project.build.directory}/reports</outputDirectory>
+        <outputName>surefire</outputName>
+    </configuration>
+</plugin>
+----
+
+==== Understanding Maven Test Lifecycle
+
+Maven distinguishes between different types of tests:
+
+* **Unit Tests** (`*Test.java`, `*Tests.java`): Run by Surefire plugin during `mvn test` phase
+* **Integration Tests** (`*IT.java`): Run by Failsafe plugin during `mvn verify` phase
+* **Test Reports**: Generated for CI/CD pipeline consumption and team visibility
+
+This configuration ensures:
+
+* Tests run correctly in both local development and CI environments
+* Proper separation between unit and integration tests
+* Standardized test reporting for automated pipelines
+
+[NOTE]
+====
+Spring Boot's parent POM manages plugin versions automatically, so explicit version declarations are unnecessary. This approach ensures compatibility and reduces maintenance overhead.
+====
+
 === Exploring Actuator Endpoints
 
 With your application running, explore these actuator endpoints:
