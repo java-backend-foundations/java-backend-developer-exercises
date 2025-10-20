@@ -306,7 +306,7 @@ This configuration ensures:
 
 [NOTE]
 ====
-Spring Boot's parent POM manages plugin versions automatically, so explicit version declarations are unnecessary. This approach ensures compatibility and reduces maintenance overhead. For further details, refer to https://docs.spring.io/spring-boot/appendix/dependency-versions/properties.html[the official Spring Boot documentation on the versions managed by Spring Boot].
+Spring Boot's parent POM manages some plugin versions automatically, so explicit version declarations for such plugins are unnecessary. This approach ensures compatibility and reduces maintenance overhead. For further details, refer to https://docs.spring.io/spring-boot/appendix/dependency-versions/properties.html[the official Spring Boot documentation on the versions managed by Spring Boot].
 ====
 
 === Exploring Actuator Endpoints
