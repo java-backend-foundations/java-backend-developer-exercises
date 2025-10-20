@@ -23,7 +23,7 @@ Follow these steps to generate your project:
 |===
 | Field | Value
 
-| *Project* | Maven Project
+| *Project* | Maven Project, you can see <<appendix-maven>> for more details about Maven
 | *Language* | Java
 | *Spring Boot* | 3.5.6
 | *Group* | `com.capgemini.training`
@@ -456,6 +456,18 @@ This specification will be essential for the API development exercises in later 
 ====
 
 == Appendix
+
+[[appendix-maven]]
+=== Maven and Alternatives
+
+Maven is a popular build automation and dependency management tool for Java projects. It uses a declarative XML file (pom.xml) to manage project dependencies, build lifecycle, and plugins. Maven simplifies project setup, builds, testing, and deployment.
+
+Alternatives to Maven include:
+
+- **Gradle**: Uses Groovy/Kotlin DSL, faster builds, flexible configuration.
+- **Ant**: Procedural build tool, less dependency management.
+
+**Official Documentation:** https://maven.apache.org
 
 [[intellij-vs-maven]]
 === 🆚 IntelliJ Run Config vs mvn spring-boot:run
