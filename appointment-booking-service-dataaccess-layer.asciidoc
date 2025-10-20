@@ -577,6 +577,22 @@ Its version should be managed by Spring Boot.
 Install the https://projectlombok.org/setup/overview[Lombok plugin in your IDE]. This is required for proper annotation processing and code completion. Without it, IDE may show false errors despite successful compilation.
 ====
 
+[TIP]
+====
+Since Lombok is a compile-time tool, its JAR is not needed at runtime.
+Excluding it from the final application artifact (such as the executable JAR or WAR file) is considered a best practice: it reduces the final JAR size and avoids having unnecessary libraries on the runtime classpath.
+Add this configuration to your `pom.xml` for `spring-boot-maven-plugin`:
+[source,xml]
+<configuration>
+    <excludes>
+        <exclude>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </exclude>
+    </excludes>
+</configuration>
+====
+
 For details about the difference between `optional` and `provided` configuration, see <<lombok-appendix, Appendix: Lombok Dependency Configuration>>.
 
 === Package Structure
@@ -1630,6 +1646,17 @@ JPA queries are validated at runtime, not compile-time. Always test custom queri
 *Think about it:* How does a well-designed data access layer contribute to overall application quality? Consider impact on testing, debugging, maintenance, and future feature development.
 
 What architectural patterns have you noticed emerging from this design? How would you extend this to handle more complex scenarios like auditing, soft deletes, or partitioning?
+====
+
+== End of Exercise Block 2
+
+[IMPORTANT]
+====
+**Checkpoint: Save Your Progress**
+
+1. **Commit & push your changes** to your working branch with a descriptive message
+2. **Create a Pull Request** from your working branch to your solution branch
+3. **Compare your implementation** with the reference solution available in the solution repository on branch `feature/2-dataaccess-repositories` (your trainer will provide access)
 ====
 
 [[lombok-appendix]]
