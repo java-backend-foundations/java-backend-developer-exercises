@@ -565,16 +565,19 @@ Add https://projectlombok.org/[Lombok] dependency to the pom.xml to reduce boile
 <dependency>
     <groupId>org.projectlombok</groupId>
     <artifactId>lombok</artifactId>
-    <scope>provided</scope>
+    <optional>true</optional>
 </dependency>
 ----
 
-It generates constructors, getters, and setters automatically, improving code readability. Its version should be managed by Spring Boot.
+Lombok automatically generates constructors, getters, setters, and other methods at compile time, improving code readability and reducing repetitive code.
+Its version should be managed by Spring Boot.
 
 [IMPORTANT]
 ====
 Install the https://projectlombok.org/setup/overview[Lombok plugin in your IDE]. This is required for proper annotation processing and code completion. Without it, IDE may show false errors despite successful compilation.
 ====
+
+For details about the difference between `optional` and `provided` configuration, see <<lombok-appendix, Appendix: Lombok Dependency Configuration>>.
 
 === Package Structure
 
@@ -953,8 +956,8 @@ Now, implement a test method that will validate the database contains the expect
         classMap.forEach((entityType, expectedCount) ->
                 assertThat(em.createQuery("from " + entityType.getSimpleName()).getResultList()).hasSize(expectedCount));
     }
-}
 ----
+
 For each entity type, we define the expected number of records in a map.
 
 Using `EntityManager`, we execute a simple query `"from <EntityName>"` to fetch all records of a given entity type.
@@ -1628,6 +1631,58 @@ JPA queries are validated at runtime, not compile-time. Always test custom queri
 
 What architectural patterns have you noticed emerging from this design? How would you extend this to handle more complex scenarios like auditing, soft deletes, or partitioning?
 ====
+
+[[lombok-appendix]]
+== Appendix: Lombok Dependency Configuration
+
+Lombok is a compile-time annotation processor. It should not be included in the final runtime package (JAR/WAR), nor should it be propagated to other projects that depend on yours.
+That’s why using the `optional=true` configuration is recommended instead of `scope=provided`.
+
+[cols="1,1,1", options="header"]
+|===
+| Feature | `optional=true` | `scope=provided`
+
+| Available during compilation
+| ✅ Yes
+| ✅ Yes
+
+| Included in runtime classpath
+| 🚫 No
+| 🚫 No
+
+| Propagated to dependent projects (transitive)
+| 🚫 No
+| ✅ Yes
+
+| Semantic meaning
+| “Local-only dependency — don’t export it further”
+| “Runtime environment will provide it”
+
+| Typical examples
+| Lombok, annotation processors
+| `jakarta.servlet-api`, `jakarta.annotation-api`
+
+| Recommended for Lombok
+| ✅ Yes
+| ⚠️ No (works, but semantically misleading)
+|===
+
+In summary, use:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <optional>true</optional>
+</dependency>
+----
+
+This configuration:
+
+- keeps the dependency available for your local compilation,
+- prevents unnecessary propagation,
+- and aligns with Maven’s intended semantics for annotation processors.
 
 == Navigation
 

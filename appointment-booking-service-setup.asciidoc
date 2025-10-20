@@ -87,6 +87,10 @@ Examine the generated project structure. Spring Initializr has created a basic s
 *Think about it:* Why do you think Spring Boot includes the test dependency by default? What does this tell us about Spring Boot's philosophy regarding testing?
 ====
 
+As you can see, the `spring-boot-starter-test` dependency has the scope set to `test`.
+This means that it will only be available during the test phase and will not be included in the final application package.
+For a quick overview of Maven configuration tags used in the `pom.xml` file—such as `<scope>`, `<optional>`, and `<exclusions>`—see <<maven-config-appendix, Appendix: Key Maven Dependency Configuration Tags>>.
+
 == Configuring the Application
 
 Add the following configuration to the `application.properties` file to enhance actuator endpoint visibility:
@@ -502,6 +506,42 @@ This section compares *two common ways to run Spring Boot applications* during d
 
 To summarize: use IntelliJ for fast local development and debugging, and `mvn spring-boot:run` for consistent, portable execution across environments.
 
+
+[[maven-config-appendix]]
+=== Key Maven Dependency Configuration Tags
+
+Below is a short overview of common `<dependency>` configuration tags you’ll encounter in a `pom.xml`, what they mean, when you’d typically use them, and links to further reading.
+
+[cols="1,2,2", options="header"]
+|===
+| Tag | What it does | Typical use
+
+| `<scope>`
+| Defines when a dependency is included (e.g., `compile`, `test`, `runtime`, `provided`).
+| For example:
+
+* `compile` – default; available everywhere
+
+* `provided` – available at compile time; runtime provided by container
+
+* `test` – only available during tests
+
+* `runtime` – needed at runtime but not compile time
+
+* `system` / `import` – special cases
+
+| `<optional>`
+| Marks a dependency as *non-transitive*: downstream projects that depend on your project will **not** automatically include it.
+| Use when you include a library internally but don’t want every user of your artifact to automatically bring it in (e.g., Lombok).
+
+| `<exclusions>`
+| Allows you to exclude specific transitive dependencies that would otherwise be brought in indirectly.
+| Use when a dependency brings in something you don’t want (e.g., conflicting version, large unused library, license issue).
+|===
+
+For further reading:
+
+* “Introduction to the Dependency Mechanism” (Apache Maven) – https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
 
 == Navigation
 
