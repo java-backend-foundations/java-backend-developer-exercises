@@ -12,7 +12,9 @@ Ensure you have prepared your development environment as described in the link:p
 
 == Creating the Spring Boot Application
 
-We'll create a Spring Boot application using Spring Initializr. Follow these steps to generate your project:
+We'll create a Spring Boot application using Spring Initializr. The official documentation of the Spring Boot you can find here: https://docs.spring.io/spring-boot/index.html[Spring Boot documentation].
+
+Follow these steps to generate your project:
 
 . Navigate to the Spring Initializr website: link:https://start.spring.io[https://start.spring.io]
 . Configure the project with the following settings:
@@ -238,6 +240,7 @@ To ensure proper test execution and reporting in CI/CD environments, add the fol
 
 [source,xml]
 ----
+<!-- Unit tests -->
 <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-surefire-plugin</artifactId>
@@ -249,6 +252,7 @@ To ensure proper test execution and reporting in CI/CD environments, add the fol
     </configuration>
 </plugin>
 
+<!-- Integration tests -->
 <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-failsafe-plugin</artifactId>
@@ -267,12 +271,21 @@ To ensure proper test execution and reporting in CI/CD environments, add the fol
     </executions>
 </plugin>
 
+<!-- Test reports (for CI pipeline) -->
 <plugin>
     <groupId>org.apache.maven.plugins</groupId>
     <artifactId>maven-surefire-report-plugin</artifactId>
+    <version>3.5.4</version>
+    <executions>
+        <execution>
+            <phase>verify</phase>
+            <goals>
+                <goal>report-only</goal>
+            </goals>
+        </execution>
+    </executions>
     <configuration>
-        <outputDirectory>${project.build.directory}/reports</outputDirectory>
-        <outputName>surefire</outputName>
+        <aggregate>true</aggregate>
     </configuration>
 </plugin>
 ----
@@ -293,7 +306,7 @@ This configuration ensures:
 
 [NOTE]
 ====
-Spring Boot's parent POM manages plugin versions automatically, so explicit version declarations are unnecessary. This approach ensures compatibility and reduces maintenance overhead.
+Spring Boot's parent POM manages plugin versions automatically, so explicit version declarations are unnecessary. This approach ensures compatibility and reduces maintenance overhead. For further details, refer to https://docs.spring.io/spring-boot/appendix/dependency-versions/properties.html[the official Spring Boot documentation on the versions managed by Spring Boot].
 ====
 
 === Exploring Actuator Endpoints
@@ -542,6 +555,24 @@ Below is a short overview of common `<dependency>` configuration tags you’ll e
 For further reading:
 
 * “Introduction to the Dependency Mechanism” (Apache Maven) – https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
+
+=== About Spring
+
+"Spring" can refer to the core Spring Framework itself or the entire collection of projects and modules that have been developed under its umbrella.
+With VMware and now its parent company, Broadcom, it has become a vast ecosystem of tools and libraries for building Java applications.
+
+The *Spring Boot* and *Spring Framework* are *free* and *open-source* software released under the Apache 2.0 license.
+
+Take a look at the official Spring website for more information: https://spring.io
+
+Here are some additional Spring projects that you might find useful as you continue your development journey:
+
+* Spring Boot: https://spring.io/projects/spring-boot
+* Spring Framework: https://spring.io/projects/spring-framework
+* Spring Data: https://spring.io/projects/spring-data
+* Spring Security: https://spring.io/projects/spring-security
+* Spring Batch: https://spring.io/projects/spring-batch
+* Spring Integration: https://spring.io/projects/spring-integration
 
 == Navigation
 
