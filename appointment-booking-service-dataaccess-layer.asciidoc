@@ -1203,6 +1203,7 @@ public class AppointmentRepositoryIT extends BaseDataJpaTest {
 [NOTE]
 ====
 We test repository configuration and basic operations, but not Spring framework code itself. The focus is on verifying:
+
 - Your entity mappings work with Spring Data
 - Custom repository configuration is correct
 - Entities load from database properly
