@@ -1390,9 +1390,69 @@ Reference: https://docs.oracle.com/javaee/7/tutorial/persistence-criteria.htm
 
 === QueryDSL
 
-Fluent, type-safe query builder with excellent IDE support:
+QueryDSL is a framework that enables the construction of type-safe SQL-like queries for multiple backends including JPA, MongoDB, and SQL in Java. It provides a fluent API that allows developers to write queries in a more readable and maintainable way compared to string-based queries.
+
+[NOTE]
+====
+The original QueryDSL project has been relatively inactive in recent years, with the last major release being over 2 years old. However, the community has created several active forks, such as https://github.com/OpenFeign/querydsl, which continue to maintain and improve the library. For production use, consider evaluating these community-maintained versions.
+====
+
+QueryDSL offers a fluent, type-safe query builder with excellent IDE support. For comprehensive documentation, see: https://querydsl.com/static/querydsl/5.0.0/reference/html_single/
 
 ==== Setup
+
+**Understanding QueryDSL Code Generation**
+
+QueryDSL works by generating special "Q-classes" from your JPA entities at compile time. These Q-classes provide type-safe access to entity fields and relationships, enabling IDE autocompletion and compile-time error checking.
+
+**What happens during compilation:**
+
+1. **Annotation Processing**: The `querydsl-apt` (Annotation Processing Tool) scans your `@Entity` classes
+2. **Code Generation**: For each entity like `UserEntity`, it generates a corresponding `QUserEntity` class
+3. **Q-Class Structure**: Generated classes contain static field references (e.g., `QUserEntity.userEntity.firstName`)
+4. **Type Safety**: These references are strongly typed, preventing field name typos and type mismatches
+
+**Example of what gets generated:**
+
+From your `UserEntity` class:
+```java
+@Entity
+public class UserEntity {
+    private String firstName;
+    private String lastName;
+    // ...
+}
+```
+
+QueryDSL generates `QUserEntity` (simplified):
+```java
+public class QUserEntity extends EntityPathBase<UserEntity> {
+    public static final QUserEntity userEntity = new QUserEntity("userEntity");
+    public final StringPath firstName = createString("firstName");
+    public final StringPath lastName = createString("lastName");
+    // ...
+}
+```
+
+**Why do we need both dependencies?**
+
+* **`querydsl-jpa`**: Runtime library containing query execution classes (`JPAQueryFactory`, query builders)
+* **`querydsl-apt`**: Compile-time tool that generates Q-classes from your entities
+
+**Why do we need the Maven plugin?**
+
+The `apt-maven-plugin` tells Maven:
+
+* **When to run**: During the `generate-sources` phase (before compilation)
+* **What processor to use**: `JPAAnnotationProcessor` to scan JPA entities
+* **Where to put generated code**: `target/generated-sources/java` directory
+
+**What happens without proper setup?**
+
+* ❌ **Missing `querydsl-jpa`**: Runtime errors when executing queries
+* ❌ **Missing `querydsl-apt`**: No Q-classes generated, compilation fails
+* ❌ **Wrong classifier**: Package mismatch errors (javax vs jakarta)
+* ❌ **Missing plugin**: Q-classes not generated during Maven build
 
 Add dependencies to `pom.xml`:
 
@@ -1400,18 +1460,20 @@ Add dependencies to `pom.xml`:
 ----
 <dependency>
     <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-jpa</artifactId>
+    <version>5.1.0</version>
+    <classifier>jakarta</classifier>
+</dependency>
+<dependency>
+    <groupId>com.querydsl</groupId>
     <artifactId>querydsl-apt</artifactId>
     <version>5.1.0</version>
     <classifier>jakarta</classifier>
     <scope>provided</scope>
 </dependency>
-<dependency>
-    <groupId>com.querydsl</groupId>
-    <artifactId>querydsl-jpa</artifactId>
-    <classifier>jakarta</classifier>
-    <version>5.1.0</version>
-</dependency>
 ----
+
+The `provided` scope of the `querydsl-apt` dependency means that this jar should be made available only at build time, but not included in the application artifact.
 
 Add plugin to `<plugins>` section:
 
@@ -1428,16 +1490,53 @@ Add plugin to `<plugins>` section:
             </goals>
             <configuration>
                 <outputDirectory>target/generated-sources/java</outputDirectory>
-                <processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
+                <processor>com.querydsl.apt.jpa.JPAAnnotationProcessor</processor>
             </configuration>
         </execution>
     </executions>
 </plugin>
 ----
 
-Then run: `mvn clean install`
+[IMPORTANT]
+====
+**Why Jakarta classifier?** Spring Boot 3.x uses Jakarta EE (jakarta.*) instead of Java EE (javax.*). The `jakarta` classifier ensures QueryDSL generates code compatible with Jakarta EE APIs. Without it, you'll get compilation errors due to package mismatches.
 
-This generates Q-classes (e.g., `QAppointmentEntity`, `QClientEntity`) in `target/generated-sources/java`.
+**Minimal setup**: Only `querydsl-jpa` and `querydsl-apt` are needed for JPA queries. Additional artifacts like `querydsl-sql` are only required for direct SQL operations.
+====
+
+**Complete Setup Workflow:**
+
+1. **Add dependencies and plugin** to your `pom.xml`
+2. **Run Maven compilation**: `mvn clean compile` (or `mvn clean install`)
+3. **Verify Q-classes generation**: Check `target/generated-sources/java` directory
+4. **IDE integration**: Most IDEs automatically recognize generated sources
+
+**What you should see after successful setup:**
+
+```
+target/generated-sources/java/
+└── com/capgemini/training/appointmentbooking/dataaccess/entity/
+    ├── QUserEntity.java
+    ├── QClientEntity.java
+    ├── QSpecialistEntity.java
+    ├── QTreatmentEntity.java
+    └── QAppointmentEntity.java
+```
+
+**Common Setup Issues for Beginners:**
+
+* **"Cannot resolve symbol QUserEntity"**: Q-classes not generated - run `mvn clean compile`
+* **"Package jakarta.persistence does not exist"**: Missing `jakarta` classifier
+* **"Generated sources not found"**: IDE not recognizing generated sources - refresh/reimport project
+* **"Processor not found"**: Wrong processor class name in plugin configuration
+
+[TIP]
+====
+**IDE Setup**: After running `mvn compile`, your IDE should automatically detect generated sources. If not:
+
+* **IntelliJ IDEA**: Right-click `target/generated-sources/java` → "Mark Directory as" → "Generated Sources Root"
+* **Eclipse**: Right-click project → "Properties" → "Java Build Path" → "Source" → "Add Folder" → select `target/generated-sources/java`
+====
 
 ==== Usage
 
