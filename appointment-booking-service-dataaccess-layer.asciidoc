@@ -1439,20 +1439,21 @@ public class QUserEntity extends EntityPathBase<UserEntity> {
 * **`querydsl-jpa`**: Runtime library containing query execution classes (`JPAQueryFactory`, query builders)
 * **`querydsl-apt`**: Compile-time tool that generates Q-classes from your entities
 
-**Why do we need the Maven plugin?**
+**Why do we need annotation processing?**
 
-The `apt-maven-plugin` tells Maven:
+The `maven-compiler-plugin` with annotation processors tells Maven:
 
-* **When to run**: During the `generate-sources` phase (before compilation)
+* **When to run**: During the `compile` phase (integrated with compilation)
 * **What processor to use**: `JPAAnnotationProcessor` to scan JPA entities
-* **Where to put generated code**: `target/generated-sources/java` directory
+* **Where to put generated code**: `target/generated-sources/annotations` directory
 
 **What happens without proper setup?**
 
 * ❌ **Missing `querydsl-jpa`**: Runtime errors when executing queries
 * ❌ **Missing `querydsl-apt`**: No Q-classes generated, compilation fails
 * ❌ **Wrong classifier**: Package mismatch errors (javax vs jakarta)
-* ❌ **Missing plugin**: Q-classes not generated during Maven build
+* ❌ **Missing annotation processor**: Q-classes not generated during Maven build
+* ❌ **Missing Jakarta Persistence API**: `NoClassDefFoundError` during Q-class generation
 
 Add dependencies to `pom.xml`:
 
@@ -1475,29 +1476,50 @@ Add dependencies to `pom.xml`:
 
 The `provided` scope of the `querydsl-apt` dependency means that this jar should be made available only at build time, but not included in the application artifact.
 
-Add plugin to `<plugins>` section:
+Add plugin to `<plugins>` section in your `pom.xml` (modern approach):
 
 [source,xml]
 ----
 <plugin>
-    <groupId>com.mysema.maven</groupId>
-    <artifactId>apt-maven-plugin</artifactId>
-    <version>1.1.3</version>
-    <executions>
-        <execution>
-            <goals>
-                <goal>process</goal>
-            </goals>
-            <configuration>
-                <outputDirectory>target/generated-sources/java</outputDirectory>
-                <processor>com.querydsl.apt.jpa.JPAAnnotationProcessor</processor>
-            </configuration>
-        </execution>
-    </executions>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <annotationProcessorPaths>
+            <!-- QueryDSL annotation processor -->
+            <path>
+                <groupId>com.querydsl</groupId>
+                <artifactId>querydsl-apt</artifactId>
+                <version>5.1.0</version>
+                <classifier>jakarta</classifier>
+            </path>
+            <!-- Jakarta Persistence API needed by QueryDSL processor -->
+            <path>
+                <groupId>jakarta.persistence</groupId>
+                <artifactId>jakarta.persistence-api</artifactId>
+                <version>3.1.0</version>
+            </path>
+            <!-- Lombok annotation processor - needed because entities use @Data, @Getter, etc.
+                 Both QueryDSL and Lombok processors must run together during compilation -->
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </path>
+        </annotationProcessorPaths>
+        <generatedSourcesDirectory>target/generated-sources/annotations</generatedSourcesDirectory>
+    </configuration>
 </plugin>
 ----
 
-[IMPORTANT]
+**Why this approach works:**
+
+* ✅ **Modern**: Uses standard Maven compiler plugin instead of deprecated `apt-maven-plugin`
+* ✅ **Integrated**: Annotation processing happens during compilation, not separate phase
+* ✅ **Complete classpath**: Includes all dependencies needed by annotation processors
+* ✅ **Multiple processors**: Supports both QueryDSL and Lombok in same configuration
+* ✅ **No duplicate generation**: Avoids "Attempt to recreate a file" errors
+
+[NOTE]
 ====
 **Why Jakarta classifier?** Spring Boot 3.x uses Jakarta EE (jakarta.*) instead of Java EE (javax.*). The `jakarta` classifier ensures QueryDSL generates code compatible with Jakarta EE APIs. Without it, you'll get compilation errors due to package mismatches.
 
