@@ -12,7 +12,9 @@ Ensure you have prepared your development environment as described in the link:p
 
 == Creating the Spring Boot Application
 
-We'll create a Spring Boot application using Spring Initializr. Follow these steps to generate your project:
+We'll create a Spring Boot application using Spring Initializr. You can find the official Spring Boot documentation here: https://docs.spring.io/spring-boot/index.html[Spring Boot documentation].
+
+Follow these steps to generate your project:
 
 . Navigate to the Spring Initializr website: link:https://start.spring.io[https://start.spring.io]
 . Configure the project with the following settings:
@@ -21,7 +23,7 @@ We'll create a Spring Boot application using Spring Initializr. Follow these ste
 |===
 | Field | Value
 
-| *Project* | Maven Project
+| *Project* | Maven Project, you can see <<appendix-maven>> for more details about Maven
 | *Language* | Java
 | *Spring Boot* | 3.5.6
 | *Group* | `com.capgemini.training`
@@ -86,6 +88,10 @@ Examine the generated project structure. Spring Initializr has created a basic s
 ====
 *Think about it:* Why do you think Spring Boot includes the test dependency by default? What does this tell us about Spring Boot's philosophy regarding testing?
 ====
+
+As you can see, the `spring-boot-starter-test` dependency has the scope set to `test`.
+This means that it will only be available during the test phase and will not be included in the final application package.
+For a quick overview of Maven configuration tags used in the `pom.xml` file—such as `<scope>`, `<optional>`, and `<exclusions>`—see <<maven-config-appendix, Appendix: Key Maven Dependency Configuration Tags>>.
 
 == Configuring the Application
 
@@ -226,6 +232,81 @@ The `@SpringBootTest` annotation:
 [NOTE]
 ====
 *Think about it:* Why might this simple test be more valuable than it appears? What types of issues would cause this test to fail even though the method body is empty?
+====
+
+=== Configuring Maven Test Plugins
+
+To ensure proper test execution and reporting in CI/CD environments, add the following Maven plugins to your `pom.xml` in the `<build><plugins>` section:
+
+[source,xml]
+----
+<!-- Unit tests -->
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <configuration>
+        <includes>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+        </includes>
+    </configuration>
+</plugin>
+
+<!-- Integration tests -->
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-failsafe-plugin</artifactId>
+    <configuration>
+        <includes>
+            <include>**/*IT.java</include>
+        </includes>
+    </configuration>
+    <executions>
+        <execution>
+            <goals>
+                <goal>integration-test</goal>
+                <goal>verify</goal>
+            </goals>
+        </execution>
+    </executions>
+</plugin>
+
+<!-- Test reports (for CI pipeline) -->
+<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-report-plugin</artifactId>
+    <version>3.5.4</version>
+    <executions>
+        <execution>
+            <phase>verify</phase>
+            <goals>
+                <goal>report-only</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <aggregate>true</aggregate>
+    </configuration>
+</plugin>
+----
+
+==== Understanding Maven Test Lifecycle
+
+Maven distinguishes between different types of tests:
+
+* **Unit Tests** (`*Test.java`, `*Tests.java`): Run by Surefire plugin during `mvn test` phase
+* **Integration Tests** (`*IT.java`): Run by Failsafe plugin during `mvn verify` phase
+* **Test Reports**: Generated for CI/CD pipeline consumption and team visibility
+
+This configuration ensures:
+
+* Tests run correctly in both local development and CI environments
+* Proper separation between unit and integration tests
+* Standardized test reporting for automated pipelines
+
+[NOTE]
+====
+Spring Boot's parent POM manages some plugin versions automatically, so explicit version declarations for such plugins are unnecessary. This approach ensures compatibility and reduces maintenance overhead. For further details, refer to https://docs.spring.io/spring-boot/appendix/dependency-versions/properties.html[the official Spring Boot documentation on the versions managed by Spring Boot].
 ====
 
 === Exploring Actuator Endpoints
@@ -376,6 +457,18 @@ This specification will be essential for the API development exercises in later 
 
 == Appendix
 
+[[appendix-maven]]
+=== Maven and Alternatives
+
+Maven is a popular build automation and dependency management tool for Java projects. It uses a declarative XML file (pom.xml) to manage project dependencies, build lifecycle, and plugins. Maven simplifies project setup, builds, testing, and deployment.
+
+Alternatives to Maven include:
+
+- **Gradle**: Uses Groovy/Kotlin DSL, faster builds, flexible configuration.
+- **Ant**: Procedural build tool, less dependency management.
+
+**Official Documentation:** https://maven.apache.org
+
 [[intellij-vs-maven]]
 === 🆚 IntelliJ Run Config vs mvn spring-boot:run
 
@@ -438,6 +531,60 @@ This section compares *two common ways to run Spring Boot applications* during d
 
 To summarize: use IntelliJ for fast local development and debugging, and `mvn spring-boot:run` for consistent, portable execution across environments.
 
+
+[[maven-config-appendix]]
+=== Key Maven Dependency Configuration Tags
+
+Below is a short overview of common `<dependency>` configuration tags you’ll encounter in a `pom.xml`, what they mean, when you’d typically use them, and links to further reading.
+
+[cols="1,2,2", options="header"]
+|===
+| Tag | What it does | Typical use
+
+| `<scope>`
+| Defines when a dependency is included (e.g., `compile`, `test`, `runtime`, `provided`).
+| For example:
+
+* `compile` – default; available everywhere
+
+* `provided` – available at compile time; runtime provided by container
+
+* `test` – only available during tests
+
+* `runtime` – needed at runtime but not compile time
+
+* `system` / `import` – special cases
+
+| `<optional>`
+| Marks a dependency as *non-transitive*: downstream projects that depend on your project will **not** automatically include it.
+| Use when you include a library internally but don’t want every user of your artifact to automatically bring it in (e.g., Lombok).
+
+| `<exclusions>`
+| Allows you to exclude specific transitive dependencies that would otherwise be brought in indirectly.
+| Use when a dependency brings in something you don’t want (e.g., conflicting version, large unused library, license issue).
+|===
+
+For further reading:
+
+* “Introduction to the Dependency Mechanism” (Apache Maven) – https://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
+
+=== About Spring
+
+"Spring" can refer to the core Spring Framework itself or the entire collection of projects and modules that have been developed under its umbrella.
+With VMware and now its parent company, Broadcom, it has become a vast ecosystem of tools and libraries for building Java applications.
+
+The *Spring Boot* and *Spring Framework* are *free* and *open-source* software released under the Apache 2.0 license.
+
+Take a look at the official Spring website for more information: https://spring.io
+
+Here are some additional Spring projects that you might find useful as you continue your development journey:
+
+* Spring Boot: https://spring.io/projects/spring-boot
+* Spring Framework: https://spring.io/projects/spring-framework
+* Spring Data: https://spring.io/projects/spring-data
+* Spring Security: https://spring.io/projects/spring-security
+* Spring Batch: https://spring.io/projects/spring-batch
+* Spring Integration: https://spring.io/projects/spring-integration
 
 == Navigation
 

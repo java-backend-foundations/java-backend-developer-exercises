@@ -4,72 +4,167 @@
 
 = Appointment Booking System - Data Access Layer
 
-In this chapter we are going to create a database schema with initial data.
-Then we will map it into entities model and provide operations for management of the entities.
+In this chapter, we'll create a comprehensive database schema with initial data, map it to entity models, and implement operations for entity management. This forms the foundation of our appointment booking system's data persistence layer.
 
 toc::[]
 
-== Create your domain model
+== Understanding the Domain Model
 
-After you have completed your own link:appointment-booking-service-setup.asciidoc[Appointment Booking System Setup], we are going to create our domain model.
+After completing the link:appointment-booking-service-setup.asciidoc[Appointment Booking System Setup], we'll create our domain model based on the requirements outlined in the link:appointment-booking-system-specification.asciidoc[Appointment Booking System Specification].
 
-Going back to our example application, link:appointment-booking-system-specification.asciidoc[Appointment Booking System], we need to provide basic functionalities:
+=== Core Functionalities
 
-- Adding a new `Treatment` associated with a `Specialist`
-- Retrieving a list of available `Treatments`, optionaly filtered by `Specialist` or `Treatment` name
-- Retrieving the details of a `Treatment` - gathering information from `Treatment` and connected `Specialist`
-- Choosing a `Treatment` as a `Client` and creating an `Appointment` for a given date and hour
-- Validation of `Appointment` date conflict by checking if the date does not colide with other Appointments assigned to a `Specialist` (there can`t be two `Appointments` created for the same `Specialist` at the same time)
-- Possibility for a `Client` to check their own appointments
-- Cancelling the `Appointment` by the `Client`
-- Marking the `Appointment` as completed by the `Specialist`
-- Optional: retrieving the history of visits for a `Client` and a `Specialist`
+Our system must support these essential operations:
 
-To accomplish that we are going to work with five entities: _UserEntity_, _ClientEntity_, _SpecialistEntity_, _TreatmentEntity_ and _AppointmentEntity_.
+* Adding new `Treatments` associated with `Specialists`
+* Retrieving available `Treatments`, optionally filtered by `Specialist` or `Treatment` name
+* Retrieving detailed `Treatment` information including connected `Specialist` data
+* Creating `Appointments` as a `Client` for specific dates and times
+* Validating `Appointment` scheduling conflicts (preventing double-booking of `Specialists`)
+* Allowing `Clients` to view their appointments
+* Enabling `Appointment` cancellation by `Clients`
+* Marking `Appointments` as completed by `Specialists`
+* Optional: Retrieving visit history for `Clients` and `Specialists`
+
+[NOTE]
+====
+*Think about it:* Why is preventing double-booking crucial for a medical appointment system? What could happen if two patients were scheduled with the same specialist at the same time?
+====
+
+=== Entity Overview
+
+We'll work with five core entities: `UserEntity`, `ClientEntity`, `SpecialistEntity`, `TreatmentEntity`, and `AppointmentEntity`.
 
 image::images/dataaccess/dataaccess_entities_uml.png[width="1000", link="images/dataaccess/dataaccess_entities_uml.png"]
 
-Each of the entities will have an id generated with a sequence, version which specifies version number of the entity, created and lastUpdated Instant fields, which will inform, when the entity was created and last changed.
+==== Common Entity Attributes
 
-The _UserEntity_ will be defined by email, passwordHash, firstName and lastName. The email will always be unique.
+Each entity includes these standard fields:
 
-The _ClientEntity_ will have a _UserEntity_, which it's connected to. It will also have a collection of appointments (_AppointmentEntities_).
+* `id` - Generated using database sequences
+* `version` - Optimistic locking version number
+* `created` - Entity creation timestamp
+* `lastUpdated` - Last modification timestamp
 
-The _SpecialistEntity_ will be defined by a specialization (as an enum of type _Specialization_, with a converter). It will have a _UserEntity_, which it's connected to and hold a list of treatments, a certain specialist provides (_TreatmentEntities_).
+==== Entity Specifications
 
-The _TreatmentEntity_ will be defined by name, description and duration of the treatment (in minutes). It will have a SpecialistEntity, which describes, which specialist provides given treatment.
+* **UserEntity**: Contains `email` (unique), `passwordHash`, `firstName`, and `lastName`
+* **ClientEntity**: Links to a `UserEntity` and maintains a collection of `AppointmentEntities`
+* **SpecialistEntity**: Includes `specialization` (enum), links to a `UserEntity`, and maintains `TreatmentEntities`
+* **TreatmentEntity**: Contains `name`, `description`, `duration` (minutes), and links to a `SpecialistEntity`
+* **AppointmentEntity**: Includes `dateTime`, `status` (enum), and links to `ClientEntity` and `TreatmentEntity`
 
-The _AppointmentEntity_ will be defined by dateTime and status (as an enum of type _AppointmentStatus_). It will have a _ClientEntity_ and _TreatmentEntity_, with which it's connected.
+=== Relationship Mapping
 
-* *One-to-One Relationships*
-** A *User* has a *one-to-one* relationship with *Client*.
-** A *User* has a *one-to-one* relationship with *Specialist*. +
-Each user can either be a *Client* or a *Specialist*, but not both.
+Understanding these relationships is crucial for proper database design:
 
-* *One-to-Many Relationships*
-** A *Specialist* has a *one-to-many* relationship with *Treatment*. +
-A specialist can provide multiple treatments, but each treatment is provided by only one specialist.
-** A *Client* has a *one-to-many* relationship with *Appointment*. +
-A client can book multiple appointments, but each appointment belongs to only one client.
-** A *Treatment* has a *one-to-many* relationship with *Appointment*. +
-A treatment can be booked in multiple appointments, but each appointment refers to only one treatment.
+==== One-to-One Relationships
 
-* *Many-to-One Relationships*
-** An *Appointment* has a *many-to-one* relationship with *Client*. +
-Multiple appointments can belong to the same client.
-** An *Appointment* has a *many-to-one* relationship with *Treatment*. +
-Multiple appointments can be scheduled for the same treatment.
-    
-Only relationships Client - Appointment, and Specialist - Treatment are bidirectional.
+ * **User ↔ Client**: Each user can optionally be a client
+ * **User ↔ Specialist**: Each user can optionally be a specialist
 
-=== The database
+[IMPORTANT]
+====
+A user can be both a client and a specialist simultaneously. For example, a doctor (specialist) can also book appointments with other specialists as a client. This flexible design supports real-world scenarios where medical professionals may need services from other specialists.
+====
 
-For the sake of the training we will be working with https://www.h2database.com/html/main.html[H2 database engine] (in-memory db) to create our database schema.
-We will be using https://mvnrepository.com/artifact/org.flywaydb/flyway-core[Flyway] to migrate our database scheme.
+==== One-to-Many Relationships
 
-. Add following parameters to the `application.properties` file to enable the H2 Console and configure the H2 data base
-+
---
+ * **Specialist → Treatments**: One specialist provides multiple treatments
+ * **Client → Appointments**: One client can book multiple appointments
+ * **Treatment → Appointments**: One treatment can have multiple appointments
+
+==== Bidirectional Relationships
+Only `Client ↔ Appointment` and `Specialist ↔ Treatment` relationships are bidirectional, allowing navigation in both directions.
+
+[NOTE]
+====
+*Think about it:* Why might we choose to make some relationships bidirectional while keeping others unidirectional? What are the trade-offs in terms of performance and complexity?
+
+Consider this scenario: What happens when a user who is both a client and a specialist tries to book an appointment with themselves? How should the system handle this edge case?
+====
+
+== Adding Database and Utility Dependencies
+
+Before we can work with databases and entities, we need to add the required dependencies to our project.
+
+=== Required Dependencies
+
+Add the following dependencies to your `pom.xml` inside the `<dependencies>` section:
+
+[source,xml]
+----
+<!-- Spring Data JPA provides integration with Hibernate and simplifies database persistence through repositories -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<!-- H2 is an in-memory database used for lightweight development and testing -->
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+
+<!-- Flyway manages database schema migrations automatically on application startup -->
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-core</artifactId>
+</dependency>
+----
+
+=== Why These Dependencies?
+
+ * **spring-boot-starter-data-jpa** — Integrates Spring Data JPA and Hibernate, making persistence and repository use easy
+ * **H2** — Provides an in-memory relational database, perfect for demos and testing where no external DB is needed
+ * **Flyway** — Enables controlled, versioned database schema migrations to manage changes over time
+
+=== Verify Integration
+
+After adding dependencies, reload your Maven project (e.g., "Reimport Maven Project" in IntelliJ IDEA). Spring Boot will auto-configure the JPA EntityManager, H2 data source, and Flyway migration mechanism without extra setup.
+
+[NOTE]
+====
+*About Dependency Versions:* You don't see explicit `<version>` tags because the parent project `spring-boot-starter-parent` manages tested dependency versions via its `<dependencyManagement>` section. This approach ensures:
+
+ * Consistent, compatible versions across all Spring Boot dependencies
+ * Simplified maintenance during upgrades  
+ * Clean, shorter pom.xml with fewer version conflicts
+
+If you need to override a dependency's version (for example, to test a newer Flyway), you can add the `<version>` element explicitly — but keep this only for special cases.
+====
+
+[IMPORTANT]
+====
+After adding these dependencies, your application will have access to:
+
+ * JPA annotations (`@Entity`, `@Table`, `@Id`, etc.)
+ * Repository interfaces (`JpaRepository`, `CrudRepository`)
+ * H2 database console at `/h2-console`
+ * Automatic Flyway migration execution on startup
+ * Support for JPA persistance tests
+====
+
+== Database Configuration
+
+=== Technology Stack
+
+We'll use:
+
+ * https://www.h2database.com[**H2 Database**]: In-memory database perfect for development and testing
+ * https://mvnrepository.com/artifact/org.flywaydb/flyway-core[**Flyway**]: Database migration tool for version control of schema changes
+
+[WARNING]
+====
+H2 is excellent for development but should never be used in production. Production systems require persistent databases like PostgreSQL, MySQL, or Oracle.
+====
+
+=== Database Setup
+
+Add these configurations to your `application.properties` file:
+
+==== H2 Database Configuration
 [source,properties]
 ----
 spring.h2.console.enabled=true
@@ -78,60 +173,119 @@ spring.datasource.url=jdbc:h2:mem:appointmentbooking
 spring.datasource.username=sa
 spring.datasource.password=password
 ----
---
-. Add following parameters to the `application.properties` file to configure the Flyway
-+
---
+By design, the in-memory database is volatile, and results in data loss after application restart.
+
+We can change that behavior by using file-based storage. To do this we need to update the spring.datasource.url property:
 [source,properties]
 ----
-spring.flyway.locations=classpath:db/migration
-spring.flyway.enabled=true
-spring.flyway.clean-on-validation-error=true
+spring.datasource.url=jdbc:h2:file:/data/demo
 ----
---
 
-. While implementing the application you will need access to the *H2 Database*. Open the *H2 Console* using the following url http://localhost:8080/h2-console/. Please use the correct access data you have configured previously.
-+
---
+==== Flyway Configuration
+[source,properties]
+----
+# If you are using default location (classpath:db/migration), this property can be omitted:
+spring.flyway.locations=classpath:db/migration
+
+# Enable Flyway migrations on application startup.
+# spring.flyway.enabled=true is not strictly required if Flyway migrations should always run in your environment.
+# By default, Spring Boot activates Flyway migrations when a DataSource is present and Flyway is on the classpath
+spring.flyway.enabled=true
+----
+
+[NOTE]
+====
+*Think about it:* We're using Spring Boot's auto-configuration for Flyway, which runs migrations automatically on application startup. In which scenarios might you need to add the `flyway-maven-plugin` to your `pom.xml` instead? Consider CI/CD pipelines, manual database operations, and production deployment strategies.
+====
+
+==== JPA and Hibernate Configuration
+[source,properties]
+----
+# Hibernate DDL-auto is recommended as 'none' when using Flyway for migrations
+spring.jpa.hibernate.ddl-auto=none
+
+# To avoid potential lazy loading issues in the view layer, disable OSIV (Open Session in View) which is enabled by default in Spring Boot:
+spring.jpa.open-in-view=false
+
+# Show SQL queries in logs for easier debugging (just for development purposes)
+spring.jpa.show-sql=true
+# To beautify or pretty-print the logged SQL (see above), we can add:
+spring.jpa.properties.hibernate.format_sql=true
+----
+
+**Understanding DDL-auto Configuration**
+
+With `ddl-auto=none` and Flyway active, you rely entirely on Flyway scripts to define and evolve the schema safely and reproducibly. This approach:
+
+ * **Prevents conflicts** between Hibernate's automatic schema generation and Flyway migrations
+ * **Ensures consistency** across different environments (dev, test, production)
+ * **Provides version control** for all database changes through migration files
+ * **Enables rollback capabilities** and change tracking
+
+[WARNING]
+====
+Never use `ddl-auto=create` or `ddl-auto=create-drop` with Flyway in production! This could lead to data loss and schema conflicts.
+====
+**Disable spring.jpa.open-in-view to avoid anti-pattern in configuration**
+[WARNING]
+====
+Explicit *spring.jpa.open-in-view=false* is the best practice in most cases. More details: how to overcome
+https://stackoverflow.com/questions/30549489/what-is-this-spring-jpa-open-in-view-true-property-in-spring-boot[The OSIV Anti-Pattern ]
+====
+
+**SQL Logging**
+
+The `show-sql=true` setting displays all generated SQL queries in your application logs, which is invaluable for:
+
+* **Debugging** query performance issues
+* **Understanding** what Hibernate generates from your JPA queries
+* **Learning** how different JPA annotations translate to SQL
+* **Optimizing** database interactions
+
+[NOTE]
+====
+Optional: Consider other ways to show Hibernate/JPA SQL Statements. Take a look here: https://www.baeldung.com/sql-logging-spring-boot
+====
+
+=== Accessing the H2 Console
+
+1. Start your application
+2. Navigate to http://localhost:8080/h2-console/
+3. Use the connection details configured above:
+
 image::images/setup/h2-console-login.png[H2 Console - login]
---
-After successful login you should see following content
-+
---
+
+After successful login:
+
 image::images/setup/h2-console-content.png[H2 Console - content]
---
 
-Running application you should see in the log:
-
---
-[source,bash]
---------
-..........
-... : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:todoapp'
-..........
-..........
+You should see this in your application logs:
+[source,console]
+----
+... : H2 console available at '/h2-console'. Database available at 'jdbc:h2:mem:appointmentbooking'
 ... : Exposing 15 endpoints beneath base path '/actuator'
 ... : Tomcat started on port 8080 (http) with context path ''
-... : Started AppointmentBookingAppApplication in 7.44 seconds (process running for 8.446)
-... : Initializing Spring DispatcherServlet 'dispatcherServlet'
-... : Initializing Servlet 'dispatcherServlet'
-... : Completed initialization in 1 ms
---------
---
+----
 
-You can check that your schema is valid running AppointmentBookingApplication.java which recreates schema after each run. Created schema can be found in the H2 console.
+[NOTE]
+====
+*Think about it:* Why is having a database console useful during development? How might this help you debug data-related issues?
+====
 
-// image::images/dataaccess/dataaccess_database_uml.png[width="500", link="images/dataaccess/dataaccess_database_uml.png"]
+=== Database Schema Design
+
+Our schema is following (all tables have ID, VERSION for optimistic locking and audit columns: CREATED and LAST_UPDATED columns, some of them are omitted for some of the tables for the sake of readability):
+
 [plantuml, database-schema, svg]
 ----
 @startuml
 entity APPLICATION_USER {
-  *ID : NUMBER(19,0)
+  *ID : BIGINT
   *VERSION : INTEGER
-  *EMAIL : VARCHAR(254) --RFC 5321
+  *EMAIL : VARCHAR(254)
   *PASSWORD_HASH : VARCHAR(128)
-  *FIRST_NAME : VARCHAR(128)
-  *LAST_NAME : VARCHAR(128)
+  *FIRST_NAME : VARCHAR(255)
+  *LAST_NAME : VARCHAR(255)
   *CREATED : TIMESTAMP
   *LAST_UPDATED : TIMESTAMP
   --
@@ -139,37 +293,41 @@ entity APPLICATION_USER {
 }
 
 entity CLIENT {
-  *ID : NUMBER(19,0)
-  *USER_ID : NUMBER(19,0)
+  *ID : BIGINT
+  *USER_ID : BIGINT
+  ...
   --
   FK_USER_ID
 }
 
 entity SPECIALIST {
-  *ID : NUMBER(19,0)
-  *USER_ID : NUMBER(19,0)
+  *ID : BIGINT
+  *USER_ID : BIGINT
   *SPECIALIZATION : VARCHAR(128)
+  ...
   --
   FK_USER_ID
 }
 
 entity TREATMENT {
-  *ID : NUMBER(19,0)
-  *NAME : VARCHAR(128)
+  *ID : BIGINT
+  *NAME : VARCHAR(255)
   *DESCRIPTION : TEXT
   *DURATION_MINUTES : INTEGER
-  *SPECIALIST_ID : NUMBER(19,0)
+  *SPECIALIST_ID : BIGINT
+  ...
   --
   FK_SPECIALIST_ID
 }
 
 entity APPOINTMENT {
-  *ID : NUMBER(19,0)
+  *ID : BIGINT
   *DATE_TIME : TIMESTAMP
   *END_DATE_TIME : TIMESTAMP
   *STATUS : VARCHAR(32)
-  *CLIENT_ID : NUMBER(19,0)
-  *TREATMENT_ID : NUMBER(19,0)
+  *CLIENT_ID : BIGINT
+  *TREATMENT_ID : BIGINT
+  ...
   --
   FK_CLIENT_ID
   FK_TREATMENT_ID
@@ -179,59 +337,62 @@ APPLICATION_USER ||--|| CLIENT : is a
 APPLICATION_USER ||--|| SPECIALIST : is a
 SPECIALIST ||--o{ TREATMENT : provides
 CLIENT ||--o{ APPOINTMENT : books
-TREATMENT ||--o{ APPOINTMENT : includes
+TREATMENT ||--o{ APPOINTMENT : is scheduled as
 @enduml
 ----
 
-Lets start with the database schema. Create a new sql file _V0001__Create_schema.sql_ in appointment-booking-app/src/main/resources/db/migration/1.0/ folder.
+== Creating Database Tables
 
-==== _APPLICATION_USER_ table
+Create the migration file: `src/main/resources/db/migration/1.0/V0001__Create_schema.sql`
 
-We will add our first table APPLICATION_USER in /appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql. In the case of AppointmentBookingService, the Users will provide: id, version, email etc. Additionally, emails need to be unique among all users. So we need to represent that data in our table:
+[IMPORTANT]
+====
+Flyway migration files must follow the naming convention: `V<version>__<description>.sql`. The version number determines execution order.
+====
+
+=== APPLICATION_USER Table
 
 [source,sql]
 ----
 CREATE TABLE APPLICATION_USER (
-    ID NUMBER(19,0) NOT NULL,
+    ID BIGINT NOT NULL PRIMARY KEY,
     VERSION INTEGER NOT NULL,
-    EMAIL VARCHAR(128) NOT NULL,
+    EMAIL VARCHAR(254) NOT NULL,
     PASSWORD_HASH VARCHAR(128) NOT NULL,
-    FIRST_NAME VARCHAR(128) NOT NULL,
-    LAST_NAME VARCHAR(128) NOT NULL,
+    FIRST_NAME VARCHAR(255) NOT NULL,
+    LAST_NAME VARCHAR(255) NOT NULL,
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (ID),
     CONSTRAINT UNIQUE_USER_EMAIL UNIQUE (EMAIL)
 );
 ----
- 
-- ID: the id for each item, automatically incremented using sequence HIBERNATE_SEQUENCE.
-- VERSION: used internally by JPA to take care of the optimistic locking for us.
-- CREATED: informs, when the entity was first created and saved. Default: current point in time
-- LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-- EMAIL: Email address of the user. Unique.
-- PASSWORD_HASH: a secure way to store passwords in the database (further described in the Security Part of the exercises).
-- FIRST_NAME: User's first name
-- LAST_NAME: User's last name
- 
-We will also set the constraints:
 
-- primary key for id to take care of it's uniqueness.
-- UNIQUE_USER_EMAIL unique constraing for email column.
+==== Field Explanations
 
-Notice, how we are using *APPLICATION_USER* instead of just *USER* as a name. USER is a reserved word, and we can't create a table with that name.
+ * **ID**: Primary key, auto-incremented via sequence
+ * **VERSION**: JPA optimistic locking version
+ * **EMAIL**: Unique identifier following RFC 5321 (max 254 characters)
+ * **PASSWORD_HASH**: Secure password storage (never store plain text!)
+ * **CREATED/LAST_UPDATED**: Audit timestamps with automatic defaults
 
-==== _CLIENT_ table
+[WARNING]
+====
+We use `APPLICATION_USER` instead of `USER` because `USER` is a reserved word in most SQL databases.
+====
 
-We will now add the CLIENT table in `/appointment-booking-app/src/main/resources/db/migration/1.0/V0001__Create_schema.sql`.  
-Each Client is associated with a User, meaning there is a **one-to-one relationship** between the CLIENT and APPLICATION_USER. We add the *ON DELETE CASCADE* clause, because Client can't exist without a User - and if the User is deleted, the Client should be removed as well.
+[NOTE]
+====
+*Think about it:* Why do we store password hashes instead of plain text passwords? What security risks would plain text passwords introduce?
+====
+
+=== CLIENT Table
 
 [source,sql]
 ----
 CREATE TABLE CLIENT (
-    ID NUMBER(19,0) NOT NULL,
+    ID BIGINT NOT NULL,
     VERSION INTEGER NOT NULL,
-    USER_ID NUMBER(19,0) NOT NULL,
+    USER_ID BIGINT NOT NULL,
     CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (ID),
@@ -239,296 +400,280 @@ CREATE TABLE CLIENT (
 );
 ----
 
-- ID: the unique identifier for each client, automatically incremented.
-- VERSION: used internally by JPA to handle optimistic locking.
-- CREATED: informs, when the entity was first created and saved. Default: current point in time
-- LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-- USER_ID: a reference to the associated user in the APPLICATION_USER.
+The `ON DELETE CASCADE` ensures that when a user is deleted, their client record is automatically removed, maintaining referential integrity.
 
-We will also set the constraints:
+=== SPECIALIST Table
 
-- primary key for ID to ensure uniqueness.
-- foreign key constraint linking USER_ID to the APPLICATION_USER.
+**Exercise**: Create the SPECIALIST table following this specification:
 
-Since a User can either be a Client or a Specialist (but not both), this table ensures proper role separation in the system.
+ * **ID**: Primary key (BIGINT)
+ * **VERSION**: Optimistic locking (INTEGER)
+ * **USER_ID**: Foreign key to APPLICATION_USER (BIGINT)
+ * **SPECIALIZATION**: Specialist's field of expertise (VARCHAR(128))
+ * **CREATED/LAST_UPDATED**: Audit timestamps
 
-==== _SPECIALIST_ table
+Remember to include:
 
-Now lets add the SPECIALIST table.
-Each Specialist is associated with a User, meaning there is a **one-to-one relationship** between the SPECIALIST and APPLICATION_USER.
-Additionally, a Specialist has a specialization field to describe their expertise.
+ * Primary key constraint
+ * Foreign key constraint with `ON DELETE CASCADE`
+ * Proper NOT NULL constraints
 
-The table should contain following columns:
+[TIP]
+====
+Use the CLIENT table structure as a reference. The SPECIALIST table follows the same pattern with one additional column for specialization.
+====
 
-- ID: the unique identifier for each specialist, automatically incremented.
-- VERSION: used internally by JPA for optimistic locking.
-- CREATED: informs, when the entity was first created and saved. Default: current point in time
-- LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-- SPECIALIZATION: the field of expertise for the specialist (e.g. "Dentist", "Orthopaedist").
-- USER_ID: a reference to the associated user in the APPLICATION_USER.
-
-We will also set the constraints:
-
-- primary key for ID to ensure uniqueness.
-- foreign key constraint linking USER_ID to the APPLICATION_USER. Remember about *ON DELETE CASCADE* clause.
-
-==== _TREATMENT_ table
-
-Now lets add the TREATMENT table.
-Each Treatment is provided by a Specialist, meaning there is a **many-to-one relationship** between the TREATMENT and SPECIALIST.
+=== TREATMENT Table
 
 [source,sql]
 ----
 CREATE TABLE TREATMENT (
-(...)
-SPECIALIST_ID NUMBER(19,0),
-(...)
-FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID) ON DELETE CASCADE
+    -- TODO: Complete the TREATMENT table creation script here:
+    -- ... add ID, VERSION, SPECIALIST_ID foreign key and rest of the fields (in total 8 fields + one FK constraint) ...
+    NAME VARCHAR(512) NOT NULL,
+    DESCRIPTION TEXT,
+    DURATION_MINUTES INTEGER NOT NULL
 );
 ----
 
-In this case, we also assume, that a treatment should be removed, if the specialist is removed.
+==== Some field Explanations
 
-The table should contain following columns:
+* **NAME**: Name of the treatment. Real treatment names in healthcare systems can be very specific and long.
+* **DESCRIPTION **: TEXT is in PostgreSQL native unbounded text type (better than CLOB). Descriptions of actual treatments in healthcare systems often exceed 400 characters and vary significantly in length
+(need more space: contraindications, procedures, aftercare instructions).
 
-- ID: the unique identifier for each treatment, automatically incremented.
-- VERSION: used internally by JPA for optimistic locking.
-- CREATED: informs, when the entity was first created and saved. Default: current point in time
-- LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-- NAME: the name of the treatment (e.g., "Relaxing Massage").
-- DESCRIPTION: a detailed description of the treatment.
-- DURATION_MINUTES: the estimated duration of the treatment in minutes.
-- SPECIALIST_ID: a reference to the Specialist providing the treatment.
+[NOTE]
+====
+*Think about it:* Why might we want to cascade delete treatments when a specialist is removed? What are the implications for existing appointments?
+====
 
-We will also set the constraints:
+=== APPOINTMENT Table
 
-- primary key for ID to ensure uniqueness.
-- foreign key constraint linking SPECIALIST_ID to the SPECIALIST table.
+**Exercise**: Create the APPOINTMENT table with these fields:
 
-==== _APPOINTMENT_ table
+ * **ID**: Primary key (BIGINT)
+ * **VERSION**: Optimistic locking (INTEGER)
+ * **DATE_TIME**: Appointment start time (TIMESTAMP)
+ * **END_DATE_TIME**: Appointment end time (TIMESTAMP)
+ * **STATUS**: Appointment status (VARCHAR(32), default 'SCHEDULED')
+ * **CLIENT_ID**: Foreign key to CLIENT (BIGINT)
+ * **TREATMENT_ID**: Foreign key to TREATMENT (BIGINT)
+ * **CREATED/LAST_UPDATED**: Audit timestamps
 
-Finishing off, lets add the APPOINTMENT table.
-Each Appointment is booked by a Client and is associated with a specific Treatment.  
-This means there are **many-to-one relationships** between APPOINTMENT and both CLIENT and TREATMENT, which means two foreign keys for the APPOINTMENT table.
+Status values: `SCHEDULED`, `CANCELLED`, `COMPLETED`
 
-The table should contain following columns:
+Constraints:
 
-* ID: the unique identifier for each appointment, automatically incremented.
-* VERSION: used internally by JPA for optimistic locking.
-- CREATED: informs, when the entity was first created and saved. Default: current point in time
-- LAST_UPDATED: informs, when the entity was last updated. Default: current point in time
-* DATE_TIME: the scheduled date and time for the appointment.
-* END_DATE_TIME: end timestamp of appointment
-* STATUS: the current status of the appointment (default value: `SCHEDULED`), which can be:
-** `SCHEDULED`: Appointment is booked but not yet completed.
-** `CANCELLED`: Appointment has been canceled.
-** `COMPLETED`: Appointment has been completed successfully. 
-* CLIENT_ID: a reference to the Client who booked the appointment.
-* TREATMENT_ID: a reference to the Treatment associated with the appointment.
+ * Primary key on ID
+ * Foreign keys with `ON DELETE CASCADE` for both CLIENT_ID and TREATMENT_ID
+ * Check constraint: END_DATE_TIME > DATE_TIME (see Constraint Checks section)
 
-We will also set the constraints:
+[TIP]
+====
+Notice that APPOINTMENT has TWO foreign keys. This is different from the one-to-one relationships you've seen so far. Study the schema diagram to understand the relationships.
+====
 
-- primary key for ID to ensure uniqueness.
-- foreign key constraint linking CLIENT_ID to the CLIENT table - with *ON DELETE CASCADE* clause
-- foreign key constraint linking TREATMENT_ID to the TREATMENT table - with *ON DELETE CASCADE* clause
+=== Database Sequences
 
-A Client can book multiple Appointments, and a Treatment can have multiple Appointments, but each Appointment is linked to a single Client and a single Treatment.
+Create sequences for ID generation:
 
-==== SEQUENCES
-
-To provide a generation strategy for our technical IDs, lets provide some sequences for our tables and entities.
-First create a sequence for a user:
-
-[source, sql]
+[source,sql]
 ----
 CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
+CREATE SEQUENCE CLIENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
+-- Create the next required sequences. How many should there be in total?
 ----
 
-The sequence will start with 1, and each call for next_val will return the value from previus next_val call, with 100 added to it (first 101, then 201, 301 and so on). 
-Nocycle means, the sequence will not start all over again when it reaches the max value.
+[NOTE]
+====
+*Think about it:* Why do we increment by 100 instead of 1?
 
-Now create the sequences for all your entities basing off of the sequence for user.
+This is related to JPA's sequence allocation optimization. When using `@SequenceGenerator` in JPA (which will be covered in the next section), the `allocationSize` parameter defines how many IDs are preallocated and cached in memory. This reduces the number of database round-trips and improves performance, especially under high load.
 
-==== CONSTRAINT CHECKS
+If the database sequence increments by 100, and JPA is configured with `allocationSize = 100`, each call to the sequence returns a new block of 100 IDs (e.g., 101–200, 201–300, etc.). JPA then uses these IDs in memory, one by one, without querying the database again until the block is exhausted.
 
-END_DATE_TIME > DATE_TIME. How would you ensure this using Check Constraint?
+*Consider this:* What happens if the allocationSize in JPA is set to 1, but the database sequence increments by 100? You would see IDs like 101, 201, 301... — skipping 99 values each time. This is inefficient and leads to gaps.
 
-==== INDEXES
+*Why must allocationSize match the DB sequence increment?*
+To ensure consistency and avoid ID gaps or collisions, especially in distributed systems with multiple application instances. If they don’t match, JPA may either:
+- Skip IDs unnecessarily.
+- Reuse IDs (in worst-case scenarios).
+- Cause confusion when debugging or analyzing data.
 
-Indexes can significantly improve query performance by allowing the database to quickly locate and access rows in a table based on specific columns. It’s important to create indexes on columns that are frequently used in `WHERE` clauses, `JOIN` conditions, or `ORDER BY` statements.
+*What if the application crashes before using all allocated IDs?*
+Some IDs may be lost, but this is acceptable in most cases since primary keys are meant to be unique, not necessarily sequential.
 
-Creating an index on a foreign key column in Oracle is a good practice — especially to avoid full table locks when the parent table rows are updated or deleted.
+*What if you have multiple server instances sharing the same database?*
+Each instance will request its own block of IDs. Matching allocationSize and sequence increment ensures that each instance gets a distinct, non-overlapping range, avoiding collisions.
 
-Create an index for the `USER_ID` column in the `CLIENT` table:
+*What does NOCYCLE mean?*
+It ensures that the sequence never wraps around when it reaches its maximum value. This guarantees uniqueness and prevents accidental reuse of IDs.
+
+In the next section, <<entity-implementation>>, we will configure JPA entities to use these sequences properly using `@SequenceGenerator`.
+====
+
+
+=== Constraint Checks
+
+**Exercise**: Add a check constraint to ensure appointment end time is after start time.
+
+[TIP]
+====
+Syntax hint, see  https://www.h2database.com/html/grammar.html#column_constraint_definition[documentation for reference]:
+```sql
+ALTER TABLE ... ADD CONSTRAINT CHK_..._TIME
+CHECK (...);
+```
+====
+
+[NOTE]
+====
+*Think about it:* Why is this constraint important at the database level, even though it could also be enforced in Java code? Consider the defense-in-depth principle.
+====
+
+=== Database Indexes
+
+Create indexes on foreign key columns for better query performance:
 
 [source,sql]
 ----
 CREATE INDEX IDX_CLIENT_USER ON CLIENT(USER_ID);
+CREATE INDEX IDX_SPECIALIST_USER ON SPECIALIST(USER_ID);
+-- write next indexes, in total should be 5
 ----
 
-Now create the indexes for all your foreign keys across tables.
+[IMPORTANT]
+====
+Indexes on foreign keys are crucial for:
 
+ - Faster JOIN operations
+ - Preventing table locks during parent record updates/deletes
+ - Improved query performance on filtered results
+====
 
-==== Mockdata
-Finally we can provide a certain amount of mock data to start our app. Add a new sql script /appointment-booking-app/src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql adding sample data:
+=== Sample Data
 
-[%nowrap,sql]
-----
--- USERS - Clients
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-1, 0, 'Stefan', 'Kowalski', 'passwordHash1', 'stefan.kowalski@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-2, 0, 'Anna', 'Nowak', 'passwordHash2', 'annan@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-3, 0, 'Luiza', 'Poniatowska', 'passwordHash3', 'poniatowskaluiza@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-4, 0, 'Grzegorz', 'Maniewicz', 'passwordHash4', 'g.maniewicz@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+To provide realistic test data for our application, create the migration file `src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql`.
 
--- USERS - Specialists
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-5, 0, 'Dobromir', 'Zegula', 'passwordHash5', 'zegula.d@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-6, 0, 'Monika', 'Siewiczowa', 'passwordHash6', 'monika.s@yahoo.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-7, 0, 'Andrzej', 'Piaseczny', 'passwordHash7', 'a.j.piaseczny@o2.pl', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPLICATION_USER(ID, VERSION, FIRST_NAME, LAST_NAME, PASSWORD_HASH, EMAIL, CREATED, LAST_UPDATED) VALUES (-8, 0, 'Patrycja', 'Milewska', 'passwordHash8', 'milewskap@gmail.com', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+[TIP]
+====
+You can download the complete sample data from the file: link:assets/sql/V0002__Create_mockdata.sql[V0002__Create_mockdata.sql] or use the following structure:
 
--- CLIENTS
-INSERT INTO CLIENT(ID, VERSION, USER_ID, CREATED, LAST_UPDATED) VALUES (-1, 0, -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO CLIENT(ID, VERSION, USER_ID, CREATED, LAST_UPDATED) VALUES (-2, 0, -2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO CLIENT(ID, VERSION, USER_ID, CREATED, LAST_UPDATED) VALUES (-3, 0, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO CLIENT(ID, VERSION, USER_ID, CREATED, LAST_UPDATED) VALUES (-4, 0, -4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+ * **8 Users**: 4 clients and 4 specialists
+ * **4 Clients**: Linked to the first 4 users
+ * **4 Specialists**: With different specializations (Dentist, Cardiologist, Pediatrician, Orthopaedist)
+ * **12 Treatments**: Medical procedures with realistic durations (30-180 minutes)
+ * **20 Appointments**: Various statuses (SCHEDULED, COMPLETED, CANCELLED) for testing
+====
 
--- SPECIALISTS
-INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION, CREATED, LAST_UPDATED) VALUES (-1, 0, -5, 'Dentist', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION, CREATED, LAST_UPDATED) VALUES (-2, 0, -6, 'Cardiologist', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION, CREATED, LAST_UPDATED) VALUES (-3, 0, -7, 'Pediatrician', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO SPECIALIST(ID, VERSION, USER_ID, SPECIALIZATION, CREATED, LAST_UPDATED) VALUES (-4, 0, -8, 'Orthopaedist', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+[IMPORTANT]
+====
+Use negative IDs for test data (e.g., -1, -2, -3). This prevents conflicts with sequence-generated positive IDs and makes test data easily identifiable.
 
--- TREATMENTS
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-1, 0, 'Konsultacja dentystyczna', 'Konsultacja dentystyczna z diagnostyką i planem leczenia', 30, -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-2, 0, 'Leczenie kanałowe', 'Leczenie kanałowe pojedynczego zęba ze znieczuleniem', 120, -1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-3, 0, 'Konsultacja kardiologiczna', 'Konsultacja kardiologiczna z wstępną diagnostyką', 30, -2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-4, 0, 'USG serca', 'USG serca z diagnostyką', 45, -2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-5, 0, 'Konsultacja pediatryczna', 'Konsultacja pediatryczna w przypadku choroby', 20, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-6, 0, 'Bilans 2-latka', 'Bilans dwulatka z przygotowaniem dokumentacji', 40, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-7, 0, 'Wymaz z nosogardła', 'Wymaz pobierany z części nosowej gardła w celu diagnostycznym', 10, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-8, 0, 'Bilans 5-latka', 'Bilans pięciolatka z przygotowaniem dokumentacji', 40, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-9, 0, 'Płukanie żołądka', 'Interwencyjne płukanie żołądka', 30, -3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-10, 0, 'Konsultacja ortopedyczna', 'Konsultacja ortopedyczna z diagnostyką', 30, -4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-11, 0, 'Usunięcie haluksów', 'Operacja usunięcia haluksów z korekcję torebki stawowej i ścięgien', 75, -4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO TREATMENT(ID, VERSION, NAME, DESCRIPTION, DURATION_MINUTES, SPECIALIST_ID, CREATED, LAST_UPDATED) VALUES (-12, 0, 'Rekonstrukcja więzadła ACL', 'Rekonstrukcją więzadła krzyżowego przedniego (ACL) z zastąpieniem uszkodzonego więzadła nowym więzadłem ze ścięgien pacjenta.', 180, -4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+The END_DATE_TIME should be calculated as: DATE_TIME + DURATION_MINUTES. This ensures data consistency with actual treatment durations.
+====
 
--- APPOINTMENTS
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-1, 0, -1, -1,  '2024-03-01 09:00:00', '2024-03-01 09:15:00',  'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-2, 0, -2, -3,  '2024-03-02 10:30:00', '2024-03-02 10:45:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-3, 0, -3, -5,  '2024-03-03 14:00:00', '2024-03-03 14:15:00',  'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-4, 0, -4, -10, '2024-03-04 08:15:00', '2024-03-04 08:30:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-5, 0, -1, -2,  '2024-03-05 11:45:00', '2024-03-05 12:00:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-6, 0, -2, -4,  '2024-03-06 16:30:00', '2024-03-06 16:45:00',  'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-7, 0, -3, -6,  '2024-03-07 09:30:00', '2024-03-07 09:45:00',  'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-8, 0, -4, -11, '2024-03-08 13:45:00', '2024-03-08 14:00:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-9, 0, -1, -7,  '2024-03-09 10:00:00', '2024-03-09 10:15:00',  'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-10, 0, -2, -8, '2024-03-10 12:30:00', '2024-03-10 12:45:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-11, 0, -3, -9, '2024-03-11 15:00:00', '2024-03-11 15:15:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-12, 0, -4, -12,'2024-03-12 17:15:00', '2024-03-12 17:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-13, 0, -1, -1, '2024-03-13 08:30:00', '2024-03-13 08:45:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-14, 0, -2, -3, '2024-03-14 11:00:00', '2024-03-14 11:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-15, 0, -3, -5, '2024-03-15 13:00:00', '2024-03-15 13:15:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-16, 0, -4, -10,'2024-03-16 09:15:00', '2024-03-16 09:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-17, 0, -1, -2, '2024-03-17 14:45:00', '2024-03-17 15:00:00', 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-18, 0, -2, -4, '2024-03-18 16:00:00', '2024-03-18 16:15:00', 'SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-19, 0, -3, -6, '2024-03-19 10:45:00', '2024-03-19 11:00:00', 'CANCELLED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-INSERT INTO APPOINTMENT(ID, VERSION, CLIENT_ID, TREATMENT_ID, DATE_TIME, END_DATE_TIME, STATUS, CREATED, LAST_UPDATED) VALUES (-20, 0, -4, -11,'2024-03-20 12:15:00', '2024-03-20 12:30:00','SCHEDULED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-----
+After creating the migration file, run your application and verify the data is inserted correctly using the H2 Console.
 
-You can provide your own data or use the script above.
+[[entity-implementation]]
+== Entity Implementation
 
-Run application and check that the data you provided is inserted into the database.
+=== Lombok Setup
 
-=== Entities
-==== Lombok Setup 
-If you don't have the lombok dependency yet, add it to the pom.xml:
-[source, xml]
+Add https://projectlombok.org/[Lombok] dependency to the pom.xml to reduce boilerplate code:
+
+[source,xml]
 ----
 <dependency>
-	<groupId>org.projectlombok</groupId>
-	<artifactId>lombok</artifactId>
-	<scope>provided</scope>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <optional>true</optional>
 </dependency>
 ----
 
-You might have to install lombok separately in your IDE for the lombok annotations to work.
+Lombok automatically generates constructors, getters, setters, and other methods at compile time, improving code readability and reducing repetitive code.
+Its version should be managed by Spring Boot.
 
-==== Creating the package structure
+[IMPORTANT]
+====
+Install the https://projectlombok.org/setup/overview[Lombok plugin in your IDE]. This is required for proper annotation processing and code completion. Without it, IDE may show false errors despite successful compilation.
+====
 
-Now that we have defined the database for our entities, it's time to start creating the code of the related components.
+[TIP]
+====
+Since Lombok is a compile-time tool, its JAR is not needed at runtime.
+Excluding it from the final application artifact (such as the executable JAR or WAR file) is considered a best practice: it reduces the final JAR size and avoids having unnecessary libraries on the runtime classpath.
+Add this configuration to your `pom.xml` for `spring-boot-maven-plugin`:
+[source,xml]
+<configuration>
+    <excludes>
+        <exclude>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </exclude>
+    </excludes>
+</configuration>
+====
 
-We are going to create entities in new package _dataaccess_ which will contain all objects specific for our layer.
+For details about the difference between `optional` and `provided` configuration, see <<lombok-appendix, Appendix: Lombok Dependency Configuration>>.
 
-Create package _dataaccess.entity_ under _com.capgemini.training.appointmentbooking_ where we will place our entities.
+=== Package Structure
 
-image::images/dataaccess/dataaccess_package_creation_1.png[width="700", link="images/dataaccess/dataaccess_package_creation_1.png"]
-image::images/dataaccess/dataaccess_package_creation_2.png[width="500", link="images/dataaccess/dataaccess_package_creation_2.png"]
+Create these packages under `com.capgemini.training.appointmentbooking`:
 
-You can create _dataaccess.converter_ and _common.datatype_ as well, since we will be using these packages in the next steps.
+ * `dataaccess.entity` - Entity classes
+ * `dataaccess.converter` - JPA attribute converters
+ * `common.datatype` - Enums and common types
 
-==== BaseEntity
+=== BaseEntity Implementation
 
-Notice, that attributes _version_, _lastUpdated_ and _created_ are repeated in every entity. To make the structure cleaner and avoid duplicated code, let's extract a @MappedSuperclass, that each of our entities will extend.
-Create a new class in package _com.capgemini.training.appointmentbooking.dataaccess.entity_:
+Notice that attributes _version_, _lastUpdated_ and _created_ are repeated in every entity. To make the structure cleaner and avoid duplicated code, extract a `@MappedSuperclass` that each entity will extend.
+
+Create a base class in package `com.capgemini.training.appointmentbooking.dataaccess.entity` to eliminate duplicate audit fields:
+
 [source,java]
 ----
 @MappedSuperclass
 @Getter
 public class BaseEntity {
-	
-	@Version
-	@Setter
-	private int version;
 
-	@Column(insertable = true, updatable = false)
-	private Instant created;
-	
-	@Column(name="LAST_UPDATED")
-	private Instant lastUpdated;
-	
+    @Version
+    @Setter
+    private int version;
+
+    @Column(insertable = true, updatable = false)
+    private Instant created;
+
+    @Column(name = "LAST_UPDATED")
+    private Instant lastUpdated;
+
+    @PrePersist
+    public void prePersist() {
+        Instant now = Instant.now();
+        this.created = now;
+        this.lastUpdated = now;
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        this.lastUpdated = Instant.now();
+    }
 }
 ----
 
-It has three attributes:
+[NOTE]
+====
+*Lifecycle methods explained:*
 
-* _version_ - describing the version of the entity for optimistic locking. Only attribute with a setter
-* _created_ and _lastUpdated_ attributes. Notice, they don't have the setters - the direct access to there attributes is not allowed. We will set them in our lifecycle listeners.
-Add a listener with *@PrePersist*:
-[source,java]
-----
+ * `@PrePersist` - Called just before the entity is saved for the first time (INSERT)
+ * `@PreUpdate` - Called just before an existing entity is updated (UPDATE)
 
-	@PrePersist
-	public void prePersist() {
-		Instant now = Instant.now();
-		this.created = now;
-		this.lastUpdated = now;
-	}
+Why no setters for `created` and `lastUpdated`? Because they should only be set automatically by the database lifecycle, never modified directly. The `@PrePersist` and `@PreUpdate` methods enforce this immutability through the framework.
 
-----
+Why is `@Version` only on version with `@Setter`? Because JPA needs to update the version field automatically on every modification. Other audit fields are set by lifecycle methods instead.
+====
 
-This will set the fields just before the entity is saved fort the first time.
-Now add a second listener with *@PreUpdate*, that will only update the _lastUpdated_ field, just before executing an update query.
-
-Now you are ready to create your entities!
-
-==== UserEntity
-
-Create a new class _UserEntity_ in the same package.
-
-Mark the class with `@Entity` and `@Table` annotations, specifying the table name. Let the class extend our @MappedSuperclass _BaseEntity_ to inherit the attributes _version_, _created_ and _lastUpdated_. 
-Additionally, mark the class with `@Getters` and `@Setters` annotations from lombok - this will allow a getter and setter generation "in the background", without adding them in the class.
-
-Define private attributes based on the schema (_id, email, passwordHash, firstName, lastName_).
-
-Now, lets configure the _id_ attribute.
-
-* Mark the _id_ attribute with `@Id`. 
-* Add `@GeneratedValue` annotation, with `(strategy = GenerationType.SEQUENCE, generator = "USER_SEQ_GEN")`. This defines the generation strategy (in our case - sequence) and a generator name.
-* Add `@SequenceGenerator` annotation. Define the _name_ as _USER_SEQ_GEN_ as you specified in `@GeneratedValue` annotation. 
-Define _sequenceName_ as _USER_SEQ_. This binds the sequence we previously defined in sql with our _id_ attribute in _UserEntity_ class. 
-Set the _allocationSize_ and _initialValue_ to match the definition from sql.
-
-To ensure correct mapping to the database, add the `@Column` annotation with a specified name where needed (where the name in the database is not 1:1 with the name in java).
+=== UserEntity Implementation
 
 [source,java]
 ----
@@ -536,231 +681,301 @@ To ensure correct mapping to the database, add the `@Column` annotation with a s
 @Table(name = "APPLICATION_USER")
 @Getter
 @Setter
-public class UserEntity {
+public class UserEntity extends BaseEntity {
+
     @Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USER_SEQ_GEN")
-	@SequenceGenerator(sequenceName = "USER_SEQ", name = "USER_SEQ_GEN", allocationSize = 100, initialValue = 1)
-	private Long id;
-	
-	private String email;
-	
-	@Column(name="PASSWORD_HASH")
-	private String passwordHash;
-    
-(...)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "USER_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "USER_SEQ", name = "USER_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    private String email;
+
+    @Column(name = "PASSWORD_HASH")
+    private String passwordHash;
+
+    // TODO: Add firstName and lastName fields
+    // Remember: use @Getter and @Setter from Lombok (already on class)
+
 }
-
 ----
 
-==== ClientEntity
+==== Key Points
 
-Next to the UserEntity create ClientEntity. Mark the class with proper annotations, extend the _BaseEntity_ class.
-Prepare attributes as shown in the schema. 
-For Id use the same annotations, as in UserEntity to define the generation strategy and sequence generator. 
-Remember to use a different name for a generator and an already created sequence for Client.
- 
-Now, lets implement the **uni-directional @OneToOne relationship** between the Client and the User. 
-ClientEntity will be the owner of the relationship. Add a private attribute of type UserEntity in ClientEntity. Mark it with @OneToOne annotation and specify, that the relationship is not optional. Specify the cascade operations - only cascade _Persist_ operation. 
-Define fetch type as lazy.
-Additionally, you can add a @JoinColumn annotation, which will precisely describe what is the name of the Foreign Key column in the database in the CLIENT table, and which column it references in APPLICATION_USER table.
+* The `@Table(name = "APPLICATION_USER")` explicitly maps to our database table
+* The `@SequenceGenerator` links to the `USER_SEQ` sequence we created in SQL
+* The `allocationSize = 100` matches our sequence increment to optimize performance
+* The `@Column(name = "PASSWORD_HASH")` is needed because Java naming conventions differ from SQL
 
-[source,java]
-----
-    @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST })
-    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
-    private UserEntity user;
-----
+[NOTE]
+====
+*Think about it:* Why map the `@Table` name explicitly when it could default to lowercase table names? Consider what happens when your database uses uppercase names or reserved words.
+====
 
-We will add the **bi-directional @ManyToOne relationship** to AppointmentEntity later on.
+=== Specialization Enum
 
-==== SpecialistEntity
-
-Next to the previous entities create _SpecialistEntity_. Mark the class with proper annotations, extend _BaseEntity_.  
-Prepare attributes as shown in the schema. For _id_ use the same annotations as in _UserEntity_ and a proper sequence.
-
-For specialization attribute, *create an Enum* _Specialization_ in _/common/datatype_ package:
+Create the enum in `common.datatype` package:
 
 [source,java]
 ----
 public enum Specialization {
-	
-	DENTIST("Dentist"), 
-	CARDIOLOGIST("Cardiologist"), 
-	PEDIATRICIAN("Pediatrician"), 
-	UROLOGIST("Urologist"), 
-	NEUROLOGIST("Neurologist"), 
-	ORTHOPAEDIST("Orthopaedist");
-	
-	private String name;
 
-	private Specialization(String name) {
-		this.name = name;
-	}
+    DENTIST("Dentist"),
+    CARDIOLOGIST("Cardiologist"),
+    PEDIATRICIAN("Pediatrician"),
+    UROLOGIST("Urologist"),
+    NEUROLOGIST("Neurologist"),
+    ORTHOPAEDIST("Orthopaedist");
 
-	public String getName() {
-		return this.name;
-	}
-	
-	public static Specialization getByName(String name) {
+    private final String name;
 
-		for (Specialization s : Specialization.values()) {
-			if (s.getName().equals(name)) {
-				return s;
-			}
-		}
-		return null;
-	}
-	
-}
-----
+    Specialization(String name) {
+        this.name = name;
+    }
 
-The _getByName_ method will be needed for our converter. 
+    public String getName() {
+        return this.name;
+    }
 
-But before that, let’s implement the **uni-directional @OneToOne relationship** between _SpecialistEntity_ and _UserEntity_.  
-_SpecialistEntity_ will be the owner of the relationship.  
-Add a private attribute of type _UserEntity_ in _SpecialistEntity_. Mark it with `@OneToOne` annotation and define as non-optional. Specify the cascade operations - only cascade _Persist_ operation. 
-Define fetch type as lazy. 
-Additionally, you can use `@JoinColumn` to specify the foreign key column in the _SPECIALIST_ table and its reference in _APPLICATION_USER_.
-
-To ensure correct mapping to the database, add the `@Column` annotation with a specified name where needed.
-
-We will add the **bi-directional @OneToMany relationship** to _TreatmentEntity_ later on.
-
-===== Converting the specialization attribute
-
-Now, let’s implement an **Attribute Converter** for the `Specialization` enum.  
-
-In JPA, an `@Converter` allows us to customize how an enum is stored in the database.  
-By default, JPA can store enums as **ordinal values** (integers) or **names** (string representations of enum constants).  
-However, in our case, we want to store the **custom name field** of the `Specialization` enum instead of its default `name()`.  
-
-To achieve this, we will:  
-- Create a new class `SpecializationConverter` in package _/dataaccess/converter_ 
-- Implement `AttributeConverter<Specialization, String>`  
-- Override the `convertToDatabaseColumn(Specialization specialization)` method to return `specialization.getName()`  
-- Override the `convertToEntityAttribute(String dbData)` method to use `Specialization.getByName(dbData)`  
-- Mark the class with `@Converter`
-
-====== a. Implementation
-
-[source,java]
-----
-import jakarta.persistence.AttributeConverter;
-import jakarta.persistence.Converter;
-
-@Converter
-public class SpecializationConverter implements AttributeConverter<Specialization, String> {
-
-    @Override
-	public String convertToDatabaseColumn(Specialization specialization) {
-		
-		return specialization != null ? specialization.getName() : null;
-	}
-
-    @Override
-    public Specialization convertToEntityAttribute(String dbData) {
-        if (dbData == null) {
-            return null;
+    public static Specialization getByName(String name) {
+        for (Specialization s : Specialization.values()) {
+            if (s.getName().equals(name)) {
+                return s;
+            }
         }
-        return Specialization.getByName(dbData);
+        return null;
     }
 }
 ----
 
-====== b. Usage in SpecialistEntity
+[NOTE]
+====
+*Think about it:* Why define a custom `name` field instead of using the enum constant name directly (e.g., `DENTIST.name()`)? Consider the database values in your migration scripts - they don't match the default enum names perfectly.
+====
 
-To ensure the conversion is applied, annotate the `specialization` field in _SpecialistEntity_ with `@Convert(converter = SpecializationConverter.class)`.  
+=== AppointmentStatus Enum
 
-[source,java]
-----
-@Convert(converter = SpecializationConverter.class)
-private Specialization specialization;
-----
-
-We could also mark the Converter as `@Converter(autoApply = true)`, so that JPA automatically applies it to all entity fields of type `Specialization`.
-If we do so, we **don’t need to explicitly annotate each occurrence of Specialization**, as JPA will apply the converter automatically.  
-
-Important to note - annotation @Enumerated and @Convert can not coexist! You have to either use one or another.
-
-==== TreatmentEntity
-
-Next to other entities create _TreatmentEntity_. Mark the class with proper annotations, extend the _BaseEntity_.  
-Prepare attributes as shown in the schema. Use the same annotations for _id_ as in _UserEntity_, use proper sequence.
-
-Now, let’s implement the **bi-directional @ManyToOne relationship** between _TreatmentEntity_ and _SpecialistEntity_.  
-_TreatmentEntity_ will be the owning side and will hold information about the specialist providing the treatment.  
-Add a private attribute of type _SpecialistEntity_ in _TreatmentEntity_. Mark it with `@ManyToOne` and define the fetch type as lazy.  
-Additionally, you can use `@JoinColumn` to specify the foreign key column (but it's not necessary).
-
-[source,java]
-----
-    @ManyToOne(fetch = FetchType.LAZY)
-    private SpecialistEntity specialist;
-}
-----
-
-Even though _TreatmentEntity_ is the owner, we also want _SpecialistEntity_ to hold information about the treatments provided by a specialist.  
-
-Edit _SpecialistEntity_ and add an additional private attribute of type `List<TreatmentEntity>`.  
-Mark the attribute with `@OneToMany`, defining which attribute this relationship is mapped by, and the cascade types - only _Persist_ and _Remove_ (we don't want the Treatment to exist without a relationship to a Specialist).
-Add orphanRemoval=true, so that the Appointment will be removed, then the connection between Client and Appointment is broken.
-You can add a fetchType `LAZY` as well, it's a default type in this case though.
-
-[source,java]
-----
-@OneToMany(mappedBy = "specialist", fetch = FetchType.LAZY, orphanRemoval = true, cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
-private List<TreatmentEntity> treatments;
-----
-
-==== AppointmentEntity
-
-Next to the previous entities create _AppointmentEntity_. Mark the class with proper annotations, extend the _BaseEntity_ class.
-Prepare attributes as shown in the schema. Use the same annotations for _id_ as in _UserEntity_. Remember about the sequence.
-
-For _status_ attribute, create a simple enum AppointmentStatus next to the _Specialization_ enum:
+Create alongside `Specialization` in `common.datatype` package:
 
 [source,java]
 ----
 public enum AppointmentStatus {
-SCHEDULED, CANCELLED, COMPLETED;
+    SCHEDULED, CANCELLED, COMPLETED
 }
 ----
 
-Don't forget the @Enumerated annotation here, with EnumType.STRING.
+This enum represents the possible appointment states. It will be stored in the database using `@Enumerated(EnumType.STRING)` to maintain readability.
 
-Now, let’s implement **bi-directional @ManyToOne relationship** between _AppointmentEntity_ and _ClientEntity_.  
-_AppointmentEntity_ is the owning side and will store a reference to the client booking the appointment.
+=== Attribute Converter
 
-Add a private attribute of type _ClientEntity_ in _AppointmentEntity_.  
-Mark it with `@ManyToOne` annotation, specify the fetch type as lazy.
-
-Even though _AppointmentEntity_ is the owner, we also want _ClientEntity_ to hold a reference to the appointments booked by a client.  
-
-Edit _ClientEntity_ and add a private attribute of type `List<AppointmentEntity>`.  
-Mark it with `@OneToMany`, specifying the mapped attribute, orphanRemoval, fetch type and cascade types. 
+Create `SpecializationConverter` in `dataaccess.converter` package:
 
 [source,java]
 ----
-@OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval=true, cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
-private List<AppointmentEntity> appointments;
+@Converter
+public class SpecializationConverter implements AttributeConverter<Specialization, String> {
+
+    @Override
+    public String convertToDatabaseColumn(Specialization specialization) {
+        return specialization != null ? specialization.getName() : null;
+    }
+
+    @Override
+    public Specialization convertToEntityAttribute(String dbData) {
+        return dbData != null ? Specialization.getByName(dbData) : null;
+    }
+}
 ----
 
-Additionally, let’s implement the **uni-directional @ManyToOne relationship** between AppointmentEntity and TreatmentEntity.
-AppointmentEntity will store a reference to the treatment that the appointment is associated with, but TreatmentEntity will not store any reference to AppointmentEntity.
-This means we only define the relationship in AppointmentEntity, making it a one-way connection.
+[NOTE]
+====
+*Think about it:* Why use a custom converter instead of `@Enumerated`?
 
-Add a private attribute of type TreatmentEntity in AppointmentEntity.
-Mark it with @ManyToOne annotation. Define fetch type as lazy.
+With `@Enumerated`, you're limited to storing either the enum constant name or ordinal value. Custom converters let you:
 
-==== EntitySmokeIT
+ - Store the display name (e.g., "Dentist" instead of "DENTIST")
+ - Control database format independently of Java enum changes
+ - Implement custom serialization logic for complex transformations
 
-Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.  
+However, `@Enumerated` is simpler for straightforward cases. Choose converters when you need custom control.
+====
+
+=== Entity Relationships & Implementations
+
+==== Understanding Relationships
+
+Before implementing entities, understand the relationship types:
+
+* **One-to-One (1:1)**: User ↔ Client (each user has max one client record)
+* **One-to-Many (1:n)**: Specialist → Treatments (one specialist provides many treatments)
+* **Many-to-One (n:1)**: Treatments → Specialist (many treatments from one specialist)
+* **Many-to-Many (n:m)**: Not used in this schema
+
+Relationships can be **unidirectional** (one side knows the other) or **bidirectional** (both sides know each other).
+
+[NOTE]
+====
+*Which side owns the relationship?*
+
+In bidirectional relationships, one side is the "owner" (holds the foreign key) and the other is "mapped by" (read-only). The owner side determines what gets persisted to the database. Always put `@JoinColumn` on the owner side.
+====
+
+==== ClientEntity with Bidirectional Relationships
+
+[source,java]
+----
+@Entity
+@Table(name = "CLIENT")
+@Getter
+@Setter
+public class ClientEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "CLIENT_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "CLIENT_SEQ", name = "CLIENT_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // Unidirectional one-to-one: ClientEntity -> UserEntity
+    // This is the owning side (holds the foreign key)
+    @OneToOne(optional = false, fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST})
+    @JoinColumn(name = "USER_ID", referencedColumnName = "ID")
+    private UserEntity user;
+
+    // Bidirectional one-to-many: ClientEntity <- AppointmentEntity
+    // This is the non-owning side (AppointmentEntity is the owner)
+    @OneToMany(mappedBy = "client", fetch = FetchType.LAZY, orphanRemoval = true,
+               cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
+    private List<AppointmentEntity> appointments = new ArrayList<>();
+}
+----
+
+[TIP]
+====
+Key parameters explained:
+
+* `optional = false` - Client must have a User (enforces 1:1 constraint)
+* `fetch = FetchType.LAZY` - Don't load user until explicitly accessed (performance)
+* `cascade = {CascadeType.PERSIST}` - When saving client, also save new user
+* `orphanRemoval = true` - Delete appointments if removed from the list
+* `mappedBy = "client"` - The AppointmentEntity side owns this relationship
+====
+
+==== SpecialistEntity Exercise
+
+**Exercise**: Implement `SpecialistEntity` following the pattern of `ClientEntity`, but with these requirements:
+
+[source,java]
+----
+@Entity
+@Table(name = "SPECIALIST")
+@Getter
+@Setter
+public class SpecialistEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "SPECIALIST_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "SPECIALIST_SEQ", name = "SPECIALIST_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add one-to-one relationship with UserEntity (same pattern as ClientEntity)
+
+    // TODO: Add specialization field with @Convert annotation
+    // Hint: Use SpecializationConverter
+
+    // TODO: Add bidirectional one-to-many relationship with TreatmentEntity
+    // Hint: Use cascade {PERSIST, REMOVE} and orphanRemoval = true
+}
+----
+
+[TIP]
+====
+Reference the ClientEntity implementation above. The pattern is nearly identical, with one difference: you'll add a bidirectional relationship with `TreatmentEntity` instead of `AppointmentEntity`.
+====
+
+==== TreatmentEntity with Many-to-One Relationship
+
+**Exercise**: Implement `TreatmentEntity` with the following requirements:
+
+[source,java]
+----
+@Entity
+@Table(name = "TREATMENT")
+@Getter
+@Setter
+public class TreatmentEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "TREATMENT_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "TREATMENT_SEQ", name = "TREATMENT_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add name field (VARCHAR(128))
+    // TODO: Add description field (TEXT)
+    // TODO: Add durationMinutes field (INTEGER)
+
+    // Many-to-one: TreatmentEntity -> SpecialistEntity (owning side)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "SPECIALIST_ID")
+    private SpecialistEntity specialist;
+}
+----
+
+[NOTE]
+====
+*Why is this owning side different from ClientEntity?*
+
+In `@ManyToOne`, the owning side is always the many side (the side with foreign key in database). The SpecialistEntity side will be non-owning with `@OneToMany(mappedBy = "specialist", ...)` that you'll add to SpecialistEntity.
+====
+
+==== AppointmentEntity Exercise
+
+**Exercise**: Implement `AppointmentEntity` with relationships to both `ClientEntity` and `TreatmentEntity`:
+
+[source,java]
+----
+@Entity
+@Table(name = "APPOINTMENT")
+@Getter
+@Setter
+public class AppointmentEntity extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "APPOINTMENT_SEQ_GEN")
+    @SequenceGenerator(sequenceName = "APPOINTMENT_SEQ", name = "APPOINTMENT_SEQ_GEN",
+                       allocationSize = 100, initialValue = 1)
+    private Long id;
+
+    // TODO: Add dateTime field (TIMESTAMP)
+    // TODO: Add endDateTime field (TIMESTAMP)
+
+    // TODO: Add status field with @Enumerated(EnumType.STRING) and default "SCHEDULED"
+
+    // Many-to-one: AppointmentEntity -> ClientEntity (owning side)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "CLIENT_ID")
+    private ClientEntity client;
+
+    // TODO: Add many-to-one relationship with TreatmentEntity
+    // Hint: Similar to client relationship above
+    // Use @ManyToOne with @JoinColumn("TREATMENT_ID")
+}
+----
+
+[NOTE]
+====
+*Think about it:* Why does AppointmentEntity have TWO many-to-one relationships while ClientEntity only has one-to-one? Consider the business logic: can a client have multiple appointments? Can each appointment reference multiple treatments?
+====
+
+=== Testing Entity Mappings
+Now that entity mappings are in place, let’s verify whether they are correctly loaded from the database.
 Create a new test class named _EntitySmokeIT_ in _src/main/test_, under _com.capgemini.training.appointmentbooking.dataaccess.entity_. Annotate it with `@DataJpaTest(bootstrapMode = BootstrapMode.LAZY)` to configure JPA-related components.
 
 Inside the class, inject an instance of `EntityManager` using `@PersistenceContext`.
 
 Now, implement a test method that will validate the database contains the expected number of records for each entity.
-
 [source,java]
 ----
     @Test
@@ -779,7 +994,6 @@ Now, implement a test method that will validate the database contains the expect
         classMap.forEach((entityType, expectedCount) ->
                 assertThat(em.createQuery("from " + entityType.getSimpleName()).getResultList()).hasSize(expectedCount));
     }
-}
 ----
 
 For each entity type, we define the expected number of records in a map.
@@ -788,42 +1002,95 @@ Using `EntityManager`, we execute a simple query `"from <EntityName>"` to fetch 
 
 We then validate that the number of retrieved records matches the expected count.
 
-You are ready to go!
+[NOTE]
+====
+*Think about it:* Why is this test valuable even though it seems simple? It validates that:
 
-=== Repositories
+- All entity mappings are correct
+- The database schema matches entity definitions
+- Sample data loaded successfully
+- Relationships are properly configured
 
-To perform operations on our entities we need to create repositories for each of them. They will contain operations specific for each of the objects.
-Repositories used in Spring are already defined as Interface called _Repository_. There are multiple extensions of this interface and we will use _JpaRepository<ENTITY, ID>_.
+This is a smoke test - it doesn't test business logic, just that the foundation is solid.
+====
 
-==== Create custom repository infrastructure
-In complex projects, it is recommended to consider creating a custom repository interface.
-Advanced use cases often require the use of sophisticated mechanisms provided by the EntityManager. For this reason, we will create our own repository interface.
+[IMPORTANT]
+====
+*About transaction behavior in `@DataJpaTest`:*
 
-===== Custom repository interface
-Create custom _JpaRepository_ interface that will enable access to _EntityManager_
+By default, `@DataJpaTest` wraps each test in a transaction and rolls back after completion. This means:
+
+- Your test data is never committed to the database
+- Tests don't interfere with each other
+- Tests run faster (no I/O)
+
+However, this also means database-specific constraints (like `CHECK` constraints) may not be validated properly in tests. Always add constraints to BOTH database AND entities for *defense-in-depth* validation.
+====
+
+== End of Exercise Block 1
+
+[IMPORTANT]
+====
+**Checkpoint: Save Your Progress**
+
+Congratulations! You've completed the first exercise block covering database setup, schema creation, and entity mapping. This is a good time to save your work:
+
+1. **Commit your changes** to your working branch with a descriptive message
+2. **Push your changes** to the remote repository
+3. **Create a Pull Request** from your working branch to your solution branch
+4. **Compare your implementation** with the reference solution available in the solution repository on branch `feature/2-dataaccess` (your trainer will provide access)
+
+This allows you to:
+
+- Secure your progress before moving to the next section
+- Review differences between your approach and the reference implementation
+- Learn alternative solutions and best practices
+- Get feedback from your team during code review
+====
+
+== Repositories
+
+Repositories provide data access operations for entities. Spring Data JPA offers multiple approaches for implementing them.
+
+=== Why Custom Repository Infrastructure?
+
+For simple CRUD operations, Spring's `JpaRepository` is sufficient. However, advanced queries often require direct `EntityManager` access for:
+
+ - Criteria API queries
+ - QueryDSL queries
+ - Complex native SQL
+ - Dynamic query construction
+
+Creating a custom base repository gives us this access pattern throughout the application.
+
+=== Custom Repository Infrastructure
+
+Create a base repository interface for EntityManager access:
 
 [source,java]
 ----
-package com.capgemini.training.appointmentbooking.dataaccess.repository;
-
 @NoRepositoryBean
 public interface BaseJpaRepository<T, ID> extends JpaRepository<T, ID> {
     EntityManager getEntityManager();
 }
 ----
 
-===== Custom repository implementation
-Create custom repository implementation
+[NOTE]
+====
+The `@NoRepositoryBean` annotation tells Spring not to create a proxy for this interface - it's only meant to be extended, not used directly.
+====
+
+Implement the base repository:
 
 [source,java]
 ----
-package com.capgemini.training.appointmentbooking.dataaccess.repository.impl;
-
-public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> implements BaseJpaRepository<T, ID> {
+public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID>
+        implements BaseJpaRepository<T, ID> {
 
     private final EntityManager entityManager;
 
-    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation, EntityManager entityManager) {
+    BaseJpaRepositoryImpl(JpaEntityInformation<T, ?> entityInformation,
+                         EntityManager entityManager) {
         super(entityInformation, entityManager);
         this.entityManager = entityManager;
     }
@@ -832,16 +1099,13 @@ public class BaseJpaRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> imp
     public EntityManager getEntityManager() {
         return this.entityManager;
     }
-
 }
 ----
 
-===== Configure Spring to use custom repositories
-Now we need to configure Spring to use our custom repository
+Configure Spring to use custom repositories:
+
 [source,java]
 ----
-package com.capgemini.training.appointmentbooking.dataaccess.config;
-
 @Configuration
 @EnableJpaRepositories(
     repositoryBaseClass = BaseJpaRepositoryImpl.class,
@@ -849,184 +1113,174 @@ package com.capgemini.training.appointmentbooking.dataaccess.config;
 public class DataaccessConfiguration {}
 ----
 
-==== AppointmentRepository
+[TIP]
+====
+Add this configuration to `com.capgemini.training.appointmentbooking.dataaccess.config` package. The `basePackages` setting tells Spring where to scan for repository interfaces.
+====
 
-In the component appointmentbooking, create package dataaccess.repository. We will place there all our repositories.
+=== Repository Implementation
 
-Create interface _AppointmentRepository_. It should extend _JpaRepository_ from Spring which contains all basic operations along with methods used in sorting and paging of results. This Interface is generic.
+Create the `AppointmentRepository` in `dataaccess.repository` package:
+
 [source,java]
 ----
 public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
-    // Add imports and that's it
+    // Basic CRUD operations inherited:
+    // - save(entity)
+    // - findById(id)
+    // - findAll()
+    // - delete(entity)
+    // - deleteById(id)
+    // etc.
+
+    // TODO: Add custom query methods here
 }
 ----
 
-==== Create basic dataaccess layer integration tests infrastructure
-First we will create a _BaseTest_ that will enable AssertJ assertions.
+[NOTE]
+====
+By extending `BaseJpaRepository`, `AppointmentRepository` automatically inherits all CRUD methods from `JpaRepository`, plus access to `EntityManager` for custom queries.
+====
 
-[source, java]
+Create similar repositories for other entities:
+
+[source,java]
 ----
-package com.capgemini.training.appointmentbooking.common;
+public interface UserRepository extends BaseJpaRepository<UserEntity, Long> {}
 
+public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {}
+
+public interface SpecialistRepository extends BaseJpaRepository<SpecialistEntity, Long> {}
+
+public interface TreatmentRepository extends BaseJpaRepository<TreatmentEntity, Long> {}
+----
+
+=== Testing Infrastructure
+
+Create base test class with AssertJ support:
+
+[source,java]
+----
 public class BaseTest implements WithAssertions {
 
     protected Instant toInstant(String date) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        return LocalDateTime.parse(date, formatter).atZone(ZoneId.systemDefault()).toInstant();
+        return LocalDateTime.parse(date, formatter)
+                           .atZone(ZoneId.systemDefault())
+                           .toInstant();
     }
 }
 ----
 
-Then we create a base class for dataaccess layer integration test.
+Create base class for JPA integration tests:
 
-[source, java]
+[source,java]
 ----
-package com.capgemini.training.appointmentbooking.common;
-
 @DataJpaTest
 @Import(DataaccessConfiguration.class)
-public class BaseDataJpaTest extends BaseTest{
+public class BaseDataJpaTest extends BaseTest {
+    // Provides:
+    // - JPA testing context via @DataJpaTest
+    // - Automatic transaction support (and rollback)
+    // - Custom repository configuration via @Import
+    // - H2 in-memory database (pre-configured)
 }
 ----
 
-The _BaseDataJpaTest_ enables
+[IMPORTANT]
+====
+`@DataJpaTest` provides:
 
-* Persistance integration testing via _@DataJpaTest_ annotation
-* Support for transaction (and automatic rollback) (inherited from _@DataJpaTest_ annotation)
-* Usage of our custom repository implementation via _@Import_ annotation
+ - **Simplified context**: Only JPA/database components loaded (faster startup)
+ - **Automatic transactions**: Each test wrapped in transaction, rolled back after
+ - **Isolated tests**: No test data leaks between tests
+ - **H2 database**: Pre-configured in-memory database (no setup needed)
+ - **Performance**: Tests run much faster than full `@SpringBootTest`
 
-@DataJpaTest creates us a simplified Spring Test configuration with loaded Entities and repositories.
-All of the tests on @DataJpaTest will be launched on preconfigured H2 Database, so there's no configuration needed.
-Remember, that by default all @Test methods in a @DataJpaTest annotated test class will be automatically rolled back and not commited.
-This actually may cause some of your database-specific constraints to not be actually checked, only your Entity annotations
-- and that's a plus, because the tests are much faster, and you should add constraints to BOTH db and Entities.
-Just like you should do frontend AND backend validation.
+Reference: https://docs.spring.io/spring-boot/docs/current/api/org/springframework/boot/test/autoconfigure/orm/jpa/DataJpaTest.html
+====
 
+=== Repository Testing
 
-
-==== AppointmentRepositoryIT
-
-With a standard repository we can already perform basic CRUD operations, f.e. save, deleteById, findById.
-
-We can test the behaviour of Repository methods using unit tests. Remember that we do not test the framework itself but our usage of it. Still writing test for simple CRUD operations is usually not needed. We will write some simple tests nevertheless, just to understand the structure and behaviour of repository tests using @DataJpaTest
-
-In source folder src/test/java of project create same package as for interface.
-Alternatively, you can use IDE to generate test in corresponding package but in srt/test/java folder.
-This will enable you to test this class package protected (default visibility) methods.
-Create the class _AppointmentRepositoryTest_. Remember to add imports.
-[source,java]
-----
-public class AppointmentRepositoryIT extends BaseDataJpaTest {}
-----
-
-
-===== FindAll test
-
-Let's write our first test - we would like to find all entities.
-We will use for it findAll() method which is available in _AppointmentRepository_ thanks to inheritance of _JpaRepository_.
-Spring then creates a proxy classes of all Interfaces extending the Spring repositories, because Spring is still java,
-and you cannot have instances of interfaces.
-
-- inject _AppointmentRepository_ to test class.
-- prepare public method annotated with _@Test_
-- call there _appointmentRepository.findAll()_ method
-- check that number of found elements is same as number of elements created in your migration.
-- imports
+Create `AppointmentRepositoryIT` in `src/test/java`:
 
 [source,java]
 ----
 public class AppointmentRepositoryIT extends BaseDataJpaTest {
 
     @Autowired
-    private AppointmentRepository appointmentRepository; //some IDE's wrongfully mark this var as unused
+    private AppointmentRepository appointmentRepository;
 
     @Test
     void testFindAll() {
-        //given
         // when
         List<AppointmentEntity> result = appointmentRepository.findAll();
 
-        //then
-        assertThat(result).isNotEmpty();
-        assertThat(result).hasSize(20);
+        // then
+        assertThat(result).isNotEmpty().hasSize(20);
     }
 }
-
 ----
 
-To run the tests, right click and select run tests.
+[NOTE]
+====
+We test repository configuration and basic operations, but not Spring framework code itself. The focus is on verifying:
 
-You should also see some hibernate queries, they may be difficult to read but it's there.
+- Your entity mappings work with Spring Data
+- Custom repository configuration is correct
+- Entities load from database properly
+====
 
-[source,java]
-----
-Hibernate: select ae1_0.id,ae1_0.client_id,ae1_0.created,ae1_0.date_time,ae1_0.last_updated,ae1_0.status,ae1_0.treatment_id,ae1_0.version from appointment ae1_0
-----
+== Advanced Querying
 
-You can also use the mvn command:
-[source,bash]
-----
-mvn test
-----
+Spring Data JPA offers multiple approaches for custom queries. Choose based on complexity and team preference.
 
-Wonderful job! You've created your first Test using Spring Repositories and _@DataJpaTest_.
-You may have also heard of _@SpringBootTest_. You can try and switch it up to see the difference.
-_@SpringBootTest_'s are slower, but also allow you to test web communication and they search for
-_@SpringBootConfiguration_ when required, allowing you to overwrite configuration for testing purposes.
+=== Query Method Types Comparison
 
-Regardless JPA Testing, those annotations seem same at first, but it's much easier to connect yourself to an other database,
-be it in local or in remote test environment and check if your database constraints etc. are working,
-if your triggers, scripts or whatever else is working as intended too.
-These tests use I/O intensively, so they are PAINFULLY slow and you need to maintain data stability between tests,
-so developers need to implement proper measures. On top of that, we can throw parallel test launches out of the window.
-Still, some projects use or require this approach, so it's worth noting.
+[cols="2,2,2,2"]
+|===
+| Method | Complexity | Type-Safety | Best For
 
-
-=== Querying the Database
-
-Spring Data Allows us to use a multitude of basic queries, but what if we want something customised?
-Due to the age (Java developers prefer word "Maturity") of the language and JPA itself, multitude of different libraries,
-Domain Specific Languages, frameworks etc. were introduced, to aid us or to make our lives more difficult.
-
-In the end, it doesn't even matter - it's all always mapped to JPQL Query String, and called through entityManager, the core of JPA.
-If you will debug deep enough, you will find it (try it if you're bored).
-How you will use the JPA is usually decided by an architect or the developers themselves.
-
-== Exercise No. 1
-
-Implement those 2 queries and test them. Before you dive into the code, you may want to look at examples in paragraph below.
-
-1) Find all Treatments with partially given name, ignoring upper and lowercase
-
-2) Find all Appointments for specific Specialist(Id) which took place in the past (hint: join statement is needed here)
-
-
-== Various Query Methods
-
-Courtesy of Spring: https://docs.spring.io/spring-data/jpa/reference/jpa/query-methods.html
-
-Example's of queries in given forms with explanation:
+| Spring Query Methods | Low | Medium | Simple filters, sorting
+| @Query Annotation | Medium | High | Well-defined queries
+| Named Queries | Medium | High | Reusable, testable queries
+| Criteria API | High | Very High | Complex, dynamic queries
+| QueryDSL | Medium | Very High | Complex queries with IDE support, fluent API and code generation support
+|===
 
 === Spring Query Methods
 
-Spring Query Methods is a mechanism used solely by Spring.
-It can match the method name with corresponding table, due to Generic Type,
-and add simple clauses just by interpreting the name of the methods. It will cause wierd exceptions if this cannot be parsed, so be advised!
-
-In the _TreatmentRepository_ interface type:
-[source,java]
-----
-List<TreatmentEntity> findAllByName(String name);
-----
-That's it.
-
-==== Spring @Query Annotation
-
-Directly in the interface create a new method with a @Query annotation and JQPL query inside.
-@Param annotation is used to map the java var name of query variable
+Method names parsed automatically to generate queries:
 
 [source,java]
 ----
+// File: TreatmentRepository.java
+public interface TreatmentRepository extends BaseJpaRepository<TreatmentEntity, Long> {
+
+    // Returns treatments with name containing search term (case-insensitive)
+    List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name);
+
+    // Returns treatments by specialist, ordered by name
+    List<TreatmentEntity> findAllBySpecialistOrderByName(SpecialistEntity specialist);
+}
+----
+
+Reference: https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#jpa.query-methods
+
+[NOTE]
+====
+*Think about it:* Spring Query Methods are convenient but become unwieldy with complexity. Method names like `findAllByStatusAndSpecialistIdAndDateTimeBetweenOrderByDateTimeDesc` are hard to read. When does it make sense to switch to `@Query`?
+====
+
+=== @Query Annotation
+
+Explicit JPQL queries with parameter binding:
+
+[source,java]
+----
+// File: AppointmentRepository.java
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
+
     @Query("""
             SELECT a FROM AppointmentEntity a
             JOIN a.treatment t
@@ -1034,150 +1288,283 @@ Directly in the interface create a new method with a @Query annotation and JQPL 
             AND a.dateTime < :date
             ORDER BY a.dateTime DESC
             """)
-    List<AppointmentEntity> findAppointmentsBySpecialistIdBeforeDate(@Param("specialistId") Long specialistId, @Param("date") Instant date);
-
+    List<AppointmentEntity> findPastAppointmentsBySpecialist(
+        @Param("specialistId") Long specialistId,
+        @Param("date") Instant date);
+}
 ----
 
-==== Named Query + Named Method
+[TIP]
+====
+- Use triple-quoted strings (Java 15+) for multi-line readability
+- `@Param` annotation maps method parameters to query placeholders
+- Use JPQL entity names and field names, not table/column names
+- For reference on JPQL syntax: https://thorben-janssen.com/jpql/
+====
 
-We can predefine a NamedQuery in the Entity class as a query with a given name and query string.
-You can use parameters there, but to use Spring mechanisms,
-the name of the query needs to start with the name of the entity.
+=== Named Queries
+
+Defined on entity class, referenced by interface method:
 
 [source,java]
 ----
+// File: SpecialistEntity.java
+@Entity
 @NamedQuery(name = "SpecialistEntity.findBySpecialization",
-    query = "select s from SpecialistEntity s where specialization =:specialization")
-----
-
-
-Then you can create a method in interface with same name:
-
-[source,java]
-----
-List<SpecialistEntity> findBySpecialization(Specialization specialization);
-----
-
-If the name will match, then you will be able to run the named query from interface.
-
-=== Custom Queries
-
-To implement custom queries we need to have access to the _EntityManager_.
-It is very easy since we have already created a _BaseJpaRepository_.
-
-First, we need to define a class with the fields that will be used for searching.
-Create a _UserCriteria_ class in the criteria package to encapsulate search parameters.
-
-[source,java]
-----
-public record UserCriteria(String firstName, String lastName, String email) {
+    query = "SELECT s FROM SpecialistEntity s WHERE s.specialization = :specialization")
+public class SpecialistEntity extends BaseEntity {
+    // ...
 }
 ----
 
-Now extend your own interface repository with _BaseJpaRepository_ and implement a method.
-
 [source,java]
 ----
-@Repository
-public interface UserRepository extends BaseJpaRepository<UserEntity, Long> {
-    default List<UserEntity> findByCriteria(UserCriteria criteria) {
+// File: SpecialistRepository.java
+public interface SpecialistRepository extends BaseJpaRepository<SpecialistEntity, Long> {
 
-        EntityManager entityManager = getEntityManager();
-        // query the database using entityManager, criteria api or querydsl
-    }
+    // Method name must match query name suffix (after entity name)
+    List<SpecialistEntity> findBySpecialization(Specialization specialization);
 }
 ----
 
-==== Criteria Api
+[NOTE]
+====
+Named queries are useful for:
 
-It allows you to build somewhat customized, more complex queries, but the amount of boilerplate code is obnoxious. The boilerplate code will require two different "creator" classes to be instantiated and mixed with each other.
-In the end the dev is forced to either build a horrific chain of subclasses to generalise some of the code, or, typically, copy-paste like the client would pay them for LoC.
+- Keeping queries close to entities
+- Reusing same query across multiple repositories
+- Separating complex query logic from repository interface
 
-Here's a working sample, you can copy-paste in most of the projects using Criteria API and you're golden.
+However, they're less discoverable than `@Query` annotations in the repository.
+====
 
-In the _AppointmentRepository_ interface type:
+=== Criteria API
+
+Type-safe, programmatic query construction:
+
 [source,java]
 ----
-default List<AppointmentEntity> findByCriteria(AppointmentCriteria appointmentCriteria, EntityManager entityManager) {
-        Objects.requireNonNull(appointmentCriteria, "appointmentCriteria must not be null");
+// File: AppointmentCriteria.java (create in dataaccess.criteria package)
+public record AppointmentCriteria(
+    LocalDate startDate,
+    LocalDate endDate,
+    AppointmentStatus status,
+    Long clientId
+) {}
+----
 
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+[source,java]
+----
+// File: AppointmentRepository.java
+public interface AppointmentRepository extends BaseJpaRepository<AppointmentEntity, Long> {
+
+    default List<AppointmentEntity> findByCriteria(AppointmentCriteria criteria) {
+        CriteriaBuilder cb = getEntityManager().getCriteriaBuilder();
         CriteriaQuery<AppointmentEntity> cq = cb.createQuery(AppointmentEntity.class);
         Root<AppointmentEntity> root = cq.from(AppointmentEntity.class);
+
         List<Predicate> predicates = new ArrayList<>();
 
-        if (c.status() != null) {
-            predicateList.add(builder.like(root.get("status"), c.status().name()));
+        if (criteria.status() != null) {
+            predicates.add(cb.equal(root.get("status"), criteria.status()));
         }
 
-        // another predicates
+        if (criteria.clientId() != null) {
+            predicates.add(cb.equal(root.get("client").get("id"), criteria.clientId()));
+        }
+
+        // Add more predicates based on other criteria fields
 
         cq.where(predicates.toArray(new Predicate[0]));
-        return entityManager.createQuery(cq).getResultList();
+        return getEntityManager().createQuery(cq).getResultList();
     }
+}
 ----
 
+[NOTE]
+====
+*Think about it:* Criteria API is verbose and type-safe. When would you choose it over `@Query`? Consider: dynamic query building, avoiding string concatenation, compile-time safety vs readability.
+====
 
-=== Query DSL
+Reference: https://docs.oracle.com/javaee/7/tutorial/persistence-criteria.htm
 
-Criteria Api long lost step-brother. Everyone likes him more, he's cool. So what that (in older versions, don't know for sure now)
-he will occasionally cut parts of your query WHERE clauses and won't add them to the query String, potentially causing catastrophic reads.
-Imagine if that bad read would go to some batch processing.
+=== QueryDSL
 
-Still, those errors are not that often, and the API is so nice and easy, that we forgive him.
+QueryDSL is a framework that enables the construction of type-safe SQL-like queries for multiple backends including JPA, MongoDB, and SQL in Java. It provides a fluent API that allows developers to write queries in a more readable and maintainable way compared to string-based queries.
 
-To use QueryDSL along with its supportive QClasses we need to do the following:
+[NOTE]
+====
+The original QueryDSL project has been relatively inactive in recent years, with the last major release being over 2 years old. However, the community has created several active forks, such as https://github.com/OpenFeign/querydsl, which continue to maintain and improve the library. For production use, consider evaluating these community-maintained versions.
+====
 
-Add these 2 dependencies to the pom.xml in the _<dependencies>_ block;
+QueryDSL offers a fluent, type-safe query builder with excellent IDE support. For comprehensive documentation, see: https://querydsl.com/static/querydsl/5.0.0/reference/html_single/
+
+==== Setup
+
+**Understanding QueryDSL Code Generation**
+
+QueryDSL works by generating special "Q-classes" from your JPA entities at compile time. These Q-classes provide type-safe access to entity fields and relationships, enabling IDE autocompletion and compile-time error checking.
+
+**What happens during compilation:**
+
+1. **Annotation Processing**: The `querydsl-apt` (Annotation Processing Tool) scans your `@Entity` classes
+2. **Code Generation**: For each entity like `UserEntity`, it generates a corresponding `QUserEntity` class
+3. **Q-Class Structure**: Generated classes contain static field references (e.g., `QUserEntity.userEntity.firstName`)
+4. **Type Safety**: These references are strongly typed, preventing field name typos and type mismatches
+
+**Example of what gets generated:**
+
+From your `UserEntity` class:
+```java
+@Entity
+public class UserEntity {
+    private String firstName;
+    private String lastName;
+    // ...
+}
+```
+
+QueryDSL generates `QUserEntity` (simplified):
+```java
+public class QUserEntity extends EntityPathBase<UserEntity> {
+    public static final QUserEntity userEntity = new QUserEntity("userEntity");
+    public final StringPath firstName = createString("firstName");
+    public final StringPath lastName = createString("lastName");
+    // ...
+}
+```
+
+**Why do we need both dependencies?**
+
+* **`querydsl-jpa`**: Runtime library containing query execution classes (`JPAQueryFactory`, query builders)
+* **`querydsl-apt`**: Compile-time tool that generates Q-classes from your entities
+
+**Why do we need annotation processing?**
+
+The `maven-compiler-plugin` with annotation processors tells Maven:
+
+* **When to run**: During the `compile` phase (integrated with compilation)
+* **What processor to use**: `JPAAnnotationProcessor` to scan JPA entities
+* **Where to put generated code**: `target/generated-sources/annotations` directory
+
+**What happens without proper setup?**
+
+* ❌ **Missing `querydsl-jpa`**: Runtime errors when executing queries
+* ❌ **Missing `querydsl-apt`**: No Q-classes generated, compilation fails
+* ❌ **Wrong classifier**: Package mismatch errors (javax vs jakarta)
+* ❌ **Missing annotation processor**: Q-classes not generated during Maven build
+* ❌ **Missing Jakarta Persistence API**: `NoClassDefFoundError` during Q-class generation
+
+Add dependencies to `pom.xml`:
+
 [source,xml]
 ----
-		<dependency>
-			<groupId>com.querydsl</groupId>
-			<artifactId>querydsl-apt</artifactId>
-			<version>5.0.0</version>
-			<classifier>jakarta</classifier>
-			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.querydsl</groupId>
-			<artifactId>querydsl-jpa</artifactId>
-			<classifier>jakarta</classifier>
-			<version>5.0.0</version>
-		</dependency>
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-jpa</artifactId>
+    <version>5.1.0</version>
+    <classifier>jakarta</classifier>
+</dependency>
+<dependency>
+    <groupId>com.querydsl</groupId>
+    <artifactId>querydsl-apt</artifactId>
+    <version>5.1.0</version>
+    <classifier>jakarta</classifier>
+    <scope>provided</scope>
+</dependency>
 ----
 
+The `provided` scope of the `querydsl-apt` dependency means that this jar should be made available only at build time, but not included in the application artifact.
 
-Add this plugin in the _<plugins>_ block;
+Add plugin to `<plugins>` section in your `pom.xml` (modern approach):
 
 [source,xml]
 ----
 <plugin>
-    <groupId>com.mysema.maven</groupId>
-	<artifactId>apt-maven-plugin</artifactId>
-	<version>1.1.3</version>
-	<executions>
-		<execution>
-			<goals>
-				<goal>process</goal>
-			</goals>
-			<configuration>
-				<outputDirectory>target/generated-sources/java</outputDirectory>
-				<processor>com.mysema.query.apt.jpa.JPAAnnotationProcessor</processor>
-			</configuration>
-		</execution>
-	</executions>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+    <configuration>
+        <annotationProcessorPaths>
+            <!-- QueryDSL annotation processor -->
+            <path>
+                <groupId>com.querydsl</groupId>
+                <artifactId>querydsl-apt</artifactId>
+                <version>5.1.0</version>
+                <classifier>jakarta</classifier>
+            </path>
+            <!-- Jakarta Persistence API needed by QueryDSL processor -->
+            <path>
+                <groupId>jakarta.persistence</groupId>
+                <artifactId>jakarta.persistence-api</artifactId>
+                <version>3.1.0</version>
+            </path>
+            <!-- Lombok annotation processor - needed because entities use @Data, @Getter, etc.
+                 Both QueryDSL and Lombok processors must run together during compilation -->
+            <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </path>
+        </annotationProcessorPaths>
+        <generatedSourcesDirectory>target/generated-sources/annotations</generatedSourcesDirectory>
+    </configuration>
 </plugin>
 ----
 
-Clean and install the project.
-In target.generated-sources/annotations there should be
-_QApointmentEntity_, _QBaseEntity_, _QClientEntity_, _QSpecialistEntity_, _QTreatmentEntity_, _QUserEntity_ classes.
+**Why this approach works:**
 
-QueryDSL allows us to write us easy queries. In _ClientRepository_ we can add the method
+* ✅ **Modern**: Uses standard Maven compiler plugin instead of deprecated `apt-maven-plugin`
+* ✅ **Integrated**: Annotation processing happens during compilation, not separate phase
+* ✅ **Complete classpath**: Includes all dependencies needed by annotation processors
+* ✅ **Multiple processors**: Supports both QueryDSL and Lombok in same configuration
+* ✅ **No duplicate generation**: Avoids "Attempt to recreate a file" errors
+
+[NOTE]
+====
+**Why Jakarta classifier?** Spring Boot 3.x uses Jakarta EE (jakarta.*) instead of Java EE (javax.*). The `jakarta` classifier ensures QueryDSL generates code compatible with Jakarta EE APIs. Without it, you'll get compilation errors due to package mismatches.
+
+**Minimal setup**: Only `querydsl-jpa` and `querydsl-apt` are needed for JPA queries. Additional artifacts like `querydsl-sql` are only required for direct SQL operations.
+====
+
+**Complete Setup Workflow:**
+
+1. **Add dependencies and plugin** to your `pom.xml`
+2. **Run Maven compilation**: `mvn clean compile` (or `mvn clean install`)
+3. **Verify Q-classes generation**: Check `target/generated-sources/java` directory
+4. **IDE integration**: Most IDEs automatically recognize generated sources
+
+**What you should see after successful setup:**
+
+```
+target/generated-sources/java/
+└── com/capgemini/training/appointmentbooking/dataaccess/entity/
+    ├── QUserEntity.java
+    ├── QClientEntity.java
+    ├── QSpecialistEntity.java
+    ├── QTreatmentEntity.java
+    └── QAppointmentEntity.java
+```
+
+**Common Setup Issues for Beginners:**
+
+* **"Cannot resolve symbol QUserEntity"**: Q-classes not generated - run `mvn clean compile`
+* **"Package jakarta.persistence does not exist"**: Missing `jakarta` classifier
+* **"Generated sources not found"**: IDE not recognizing generated sources - refresh/reimport project
+* **"Processor not found"**: Wrong processor class name in plugin configuration
+
+[TIP]
+====
+**IDE Setup**: After running `mvn compile`, your IDE should automatically detect generated sources. If not:
+
+* **IntelliJ IDEA**: Right-click `target/generated-sources/java` → "Mark Directory as" → "Generated Sources Root"
+* **Eclipse**: Right-click project → "Properties" → "Java Build Path" → "Source" → "Add Folder" → select `target/generated-sources/java`
+====
+
+==== Usage
 
 [source,java]
 ----
-@Repository
+// File: ClientRepository.java
 public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> {
 
     default List<ClientEntity> findByName(String firstName, String lastName) {
@@ -1196,63 +1583,282 @@ public interface ClientRepository extends BaseJpaRepository<ClientEntity, Long> 
 }
 ----
 
-And then simply test it:
-
 [source,java]
 ----
-public class TreatmentRepositoryIT extends BaseDataJpaTest  {
+// File: ClientRepositoryIT.java - Testing QueryDSL
+public class ClientRepositoryIT extends BaseDataJpaTest {
 
     @Autowired
     private ClientRepository clientRepository;
 
     @Test
-    void testFindByQueryDSL_testFindClientsByName() {
-        // given
-        String firstName = "Stefan";
-        String lastName = "Kowalski";
-
+    void testFindByQueryDSL() {
         // when
-        List<ClientEntity> clients = clientRepository.findByName(firstName, lastName);
+        List<ClientEntity> clients = clientRepository.findByName("Stefan", "Kowalski");
 
         // then
         assertThat(clients).isNotEmpty().hasSize(1);
-        ClientEntity client = clients.getFirst();
-        assertNotNull(client.getUser(), "Expected client to have an associated user");
-        assertEquals(firstName, client.getUser().getFirstname(), "Expected client to have the specified first name");
-        assertEquals(lastName, client.getUser().getLastname(), "Expected client to have the specified last name");
+        assertThat(clients.getFirst().getUser().getFirstName()).isEqualTo("Stefan");
+        assertThat(clients.getFirst().getUser().getLastName()).isEqualTo("Kowalski");
     }
 }
 ----
 
-== Exercise No. 2:
+[IMPORTANT]
+====
+QueryDSL advantages:
 
-Implement these queries:
+ - IDE autocompletion for all query methods
+ - Type-safe (compile-time checking)
+ - Fluent, readable API
+ - SQL-like structure with Java syntax
 
-1. Find appointments within a specified time period and having a designated status - using a Spring Query Method.
-2. Find conflicted appointments for given specialistId,  begin date and end date of appointment (appointment in status CANCELLED is not a conflicting appointment)- using @Query.
-3. Find treatment by name - using NamedQuery and bind it to interface method.
-4. Find treatments by name and specialization - using QueryDSL.
-5. Find appointments history for given client/specialist - using criteria API.
+Setup overhead is higher than other approaches. Choose for complex queries where type-safety and readability matter most.
 
-Remember to test your queries!
+Reference: https://querydsl.com/
+====
 
-== Hints and Troubleshooting
+== Exercises
 
-During your implementation you may encounter multiple vague exceptions.
-JPA Exceptions look sometimes like they are wrapped or hidden, so careful console logs analysis is required.
-However, there are some exceptions that are more common than others:
+=== Exercise 1: Basic Queries
 
-[source, bash]
+Implement and test these queries:
+
+**1.1 Find treatments by partial name** (case-insensitive)
+
+- Use Spring Query Methods
+- Expected method signature: `List<TreatmentEntity> findAllByNameContainingIgnoreCase(String name)`
+- #*Write test:*# should find treatments containing "Konsultacja"
+
+**1.2 Find past appointments for a specialist**
+
+- Use `@Query` annotation with JOIN
+- Include only appointments before the current date (or any other date)
+- Exclude cancelled appointments
+- Parameters: specialistId (Long), currentDate (Instant)
+- #*Write test:*# should find all past appointments belong to the correct specialist before some specific date
+
+=== Exercise 2: Advanced Queries
+
+[TIP]
+====
+When implementing exercises:
+
+1. Write the query/method first
+2. *Write a test* that calls it
+3. *Run test* to verify it works
+4. Commit before moving to next exercise
+
+This test-first approach catches errors immediately rather than discovering them later.
+====
+
+Implement these queries and write tests for each:
+
+**2.1 Find appointments by time period and status** - Use Spring Query Methods
+
+- Parameters: startDateTime, endDateTime, status
+- Hint: Method name could be `findByDateTimeBetweenAndStatus`
+
+**2.2 Find conflicting appointments** - Use `@Query`
+
+- Find appointments for a specialist in given time range
+- Exclude CANCELLED status
+- Parameters: specialistId, appointmentStartTime, appointmentEndTime
+- Hint: You'll need to JOIN through Treatment to Specialist
+
+**2.3 Find treatment by name** - Use Named Query
+
+- Single parameter: treatment name (exact match)
+- Implement: annotation on TreatmentEntity + method in TreatmentRepository
+
+**2.4 Find treatments by specialization** - Use QueryDSL
+
+- Parameters: specialization
+- Must join with SpecialistEntity
+- Expected: treatments provided by specialists in given field
+
+**2.5 Find appointment history for a client** - Use Criteria API
+
+- Create `AppointmentHistoryCriteria` record with optional filters
+- Parameters: clientId (required), status (optional), fromDate (optional)
+- Return: all matching appointments ordered by date descending
+
+== Troubleshooting Common Issues
+
+=== IllegalStateException: Failed to load ApplicationContext
+
+**Symptom**: Test fails immediately on startup; mentions query errors
+
+**Cause**: Query compilation errors detected at application startup
+
+**Solution**:
+
+ - Check JPQL syntax carefully (entity names, field names, keywords)
+ - Verify parameter names match `@Param` annotations
+ - Ensure relationships exist and are properly mapped
+ - Check query in IDE for syntax highlighting errors
+
+[TIP]
+====
+Copy your JPQL into the application logs carefully - error messages often point to exact syntax issues.
+====
+
+=== LazyInitializationException
+
+**Symptom**: `Exception: could not initialize proxy - no Session`
+
+**Cause**: Accessing lazy-loaded associations outside transaction context
+
+**Solution**:
+
+ - Add `@Transactional` to service methods that need to load associations
+ - Explicitly fetch required associations in query: `LEFT JOIN FETCH a.user`
+ - Consider eagerly loading frequently-needed associations (carefully!)
+
+[source,java]
 ----
-IllegalStateException: Failed to load ApplicationContext
-----
-This happens usually if the query you have created has errors and does not compile.
-This is because queries are checked in runtime during startup (not compile-time) - that's why your code compiles,
-but the test or app does not run.
+// Wrong - association not loaded
+AppointmentEntity appt = appointmentRepository.findById(id).orElse(null);
+String clientName = appt.getClient().getUser().getFirstName(); // Fails!
 
+// Right - fetch association in query
+@Query("SELECT a FROM AppointmentEntity a LEFT JOIN FETCH a.client c LEFT JOIN FETCH c.user WHERE a.id = :id")
+Optional<AppointmentEntity> findByIdWithClient(@Param("id") Long id);
+----
+
+=== NoSuchElementException: Unable to parse binding parameter
+
+**Symptom**: Test runs but @Query fails with binding parameter error
+
+**Cause**: Parameter name in query doesn't match `@Param` annotation
+
+**Solution**:
+
+ - Check spelling: `@Param("specialistId")` must match `:specialistId` in query
+ - Query parameters are case-sensitive
+ - All placeholders must have corresponding `@Param` annotations
+
+=== Performance - N+1 Query Problem
+
+**Symptom**: For 100 appointments, you see 101 SQL queries in logs
+
+**Cause**: Loading collection (e.g., appointments) triggers separate query per item
+
+**Solution**:
+
+ - Use `JOIN FETCH` in queries to load associations eagerly
+ - Set appropriate `fetch = FetchType.LAZY` on relationships (default)
+ - Use Criteria API to explicitly fetch needed data
+ - Add proper indexes on foreign key columns
+
+[WARNING]
+====
+JPA queries are validated at runtime, not compile-time. Always test custom queries thoroughly to catch errors early. Enable SQL logging in tests to verify queries are efficient.
+====
+
+== Best Practices Summary
+
+=== Entity Design
+
+ - Use `@MappedSuperclass` for common audit fields
+ - Choose fetch strategies deliberately (LAZY by default)
+ - Implement `equals()`/`hashCode()` using ID fields
+ - Avoid circular bidirectional relationships if possible
+
+=== Repository Design
+
+ - Extend custom base repository for EntityManager access
+ - Use appropriate query method for each use case
+ - Write comprehensive integration tests with `@DataJpaTest`
+ - Consider team expertise when choosing query style
+
+=== Performance Considerations
+
+ - Create indexes on all foreign key columns
+ - Use lazy loading by default, eager only when necessary
+ - Write efficient queries (avoid SELECT *)
+ - Test with realistic data volumes
+
+=== Testing Best Practices
+
+ - Use `@DataJpaTest` for repository tests (faster than `@SpringBootTest`)
+ - Test both positive and negative scenarios
+ - Verify query performance with realistic data
+ - Use `toInstant()` helper for timestamp testing
+
+[NOTE]
+====
+*Think about it:* How does a well-designed data access layer contribute to overall application quality? Consider impact on testing, debugging, maintenance, and future feature development.
+
+What architectural patterns have you noticed emerging from this design? How would you extend this to handle more complex scenarios like auditing, soft deletes, or partitioning?
+====
+
+== End of Exercise Block 2
+
+[IMPORTANT]
+====
+**Checkpoint: Save Your Progress**
+
+1. **Commit & push your changes** to your working branch with a descriptive message
+2. **Create a Pull Request** from your working branch to your solution branch
+3. **Compare your implementation** with the reference solution available in the solution repository on branch `feature/2-dataaccess-repositories` (your trainer will provide access)
+====
+
+[[lombok-appendix]]
+== Appendix: Lombok Dependency Configuration
+
+Lombok is a compile-time annotation processor. It should not be included in the final runtime package (JAR/WAR), nor should it be propagated to other projects that depend on yours.
+That’s why using the `optional=true` configuration is recommended instead of `scope=provided`.
+
+[cols="1,1,1", options="header"]
+|===
+| Feature | `optional=true` | `scope=provided`
+
+| Available during compilation
+| ✅ Yes
+| ✅ Yes
+
+| Included in runtime classpath
+| 🚫 No
+| 🚫 No
+
+| Propagated to dependent projects (transitive)
+| 🚫 No
+| ✅ Yes
+
+| Semantic meaning
+| “Local-only dependency — don’t export it further”
+| “Runtime environment will provide it”
+
+| Typical examples
+| Lombok, annotation processors
+| `jakarta.servlet-api`, `jakarta.annotation-api`
+
+| Recommended for Lombok
+| ✅ Yes
+| ⚠️ No (works, but semantically misleading)
+|===
+
+In summary, use:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <optional>true</optional>
+</dependency>
+----
+
+This configuration:
+
+- keeps the dependency available for your local compilation,
+- prevents unnecessary propagation,
+- and aligns with Maven’s intended semantics for annotation processors.
 
 == Navigation
-[grid=cols]
+
+[cols="1,1"]
 |===
-link:appointment-booking-system-specification.asciidoc[Previous Chapter: Appointment Booking System Specification] | link:appointment-booking-service-business-logic-layer.asciidoc[Next Chapter: Appointment Booking System - Logic Layer] =>
+| link:appointment-booking-system-specification.asciidoc[← Previous: System Specification] | link:appointment-booking-service-business-logic-layer.asciidoc[Next: Business Logic Layer →]
 |===
