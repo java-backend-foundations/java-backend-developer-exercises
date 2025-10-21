@@ -143,6 +143,7 @@ After adding these dependencies, your application will have access to:
  * Repository interfaces (`JpaRepository`, `CrudRepository`)
  * H2 database console at `/h2-console`
  * Automatic Flyway migration execution on startup
+ * Support for JPA persistance tests
 ====
 
 == Database Configuration
@@ -151,8 +152,8 @@ After adding these dependencies, your application will have access to:
 
 We'll use:
 
- * **H2 Database**: In-memory database perfect for development and testing
- * **Flyway**: Database migration tool for version control of schema changes
+ * https://www.h2database.com[**H2 Database**]: In-memory database perfect for development and testing
+ * https://mvnrepository.com/artifact/org.flywaydb/flyway-core[**Flyway**]: Database migration tool for version control of schema changes
 
 [WARNING]
 ====
@@ -183,7 +184,12 @@ spring.datasource.url=jdbc:h2:file:/data/demo
 ==== Flyway Configuration
 [source,properties]
 ----
+# If you are using default location (classpath:db/migration), this property can be omitted:
 spring.flyway.locations=classpath:db/migration
+
+# Enable Flyway migrations on application startup.
+# spring.flyway.enabled=true is not strictly required if Flyway migrations should always run in your environment.
+# By default, Spring Boot activates Flyway migrations when a DataSource is present and Flyway is on the classpath
 spring.flyway.enabled=true
 ----
 
@@ -402,15 +408,11 @@ Use the CLIENT table structure as a reference. The SPECIALIST table follows the 
 [source,sql]
 ----
 CREATE TABLE TREATMENT (
-    ID BIGINT NOT NULL PRIMARY KEY,
-    VERSION INTEGER NOT NULL,
+    -- TODO: Complete the TREATMENT table creation script here:
+    -- ... add ID, VERSION, SPECIALIST_ID foreign key and rest of the fields (in total 8 fields + one FK constraint) ...
     NAME VARCHAR(512) NOT NULL,
     DESCRIPTION TEXT,
-    DURATION_MINUTES INTEGER NOT NULL,
-    SPECIALIST_ID BIGINT NOT NULL,
-    CREATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    LAST_UPDATED TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (SPECIALIST_ID) REFERENCES SPECIALIST(ID) ON DELETE CASCADE
+    DURATION_MINUTES INTEGER NOT NULL
 );
 ----
 
@@ -497,7 +499,7 @@ In the next section, <<entity-implementation>>, we will configure JPA entities t
 
 [TIP]
 ====
-Syntax hint:
+Syntax hint, see  https://www.h2database.com/html/grammar.html#column_constraint_definition[documentation for reference]:
 ```sql
 ALTER TABLE ... ADD CONSTRAINT CHK_..._TIME
 CHECK (...);
@@ -535,7 +537,7 @@ To provide realistic test data for our application, create the migration file `s
 
 [TIP]
 ====
-You can download the complete sample data from the file: link:V0002__Create_mockdata.sql[V0002__Create_mockdata.sql] or use the following structure:
+You can download the complete sample data from the file: link:assets/sql/V0002__Create_mockdata.sql[V0002__Create_mockdata.sql] or use the following structure:
 
  * **8 Users**: 4 clients and 4 specialists
  * **4 Clients**: Linked to the first 4 users
@@ -1223,7 +1225,7 @@ Spring Data JPA offers multiple approaches for custom queries. Choose based on c
 | @Query Annotation | Medium | High | Well-defined queries
 | Named Queries | Medium | High | Reusable, testable queries
 | Criteria API | High | Very High | Complex, dynamic queries
-| QueryDSL | Medium | Very High | Complex queries with IDE support
+| QueryDSL | Medium | Very High | Complex queries with IDE support, fluent API and code generation support
 |===
 
 === Spring Query Methods

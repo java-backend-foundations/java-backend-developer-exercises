@@ -12,7 +12,7 @@ Ensure you have prepared your development environment as described in the link:p
 
 == Creating the Spring Boot Application
 
-We'll create a Spring Boot application using Spring Initializr. The official documentation of the Spring Boot you can find here: https://docs.spring.io/spring-boot/index.html[Spring Boot documentation].
+We'll create a Spring Boot application using Spring Initializr. You can find the official Spring Boot documentation here: https://docs.spring.io/spring-boot/index.html[Spring Boot documentation].
 
 Follow these steps to generate your project:
 
