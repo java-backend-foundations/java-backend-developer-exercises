@@ -199,11 +199,16 @@ spring.flyway.enabled=true
 # Hibernate DDL-auto is recommended as 'none' when using Flyway for migrations
 spring.jpa.hibernate.ddl-auto=none
 
-# Show SQL queries in logs for easier debugging
+# To avoid potential lazy loading issues in the view layer, disable OSIV (Open Session in View) which is enabled by default in Spring Boot:
+spring.jpa.open-in-view=false
+
+# Show SQL queries in logs for easier debugging (just for development purposes)
 spring.jpa.show-sql=true
+# To beautify or pretty-print the logged SQL (see above), we can add:
+spring.jpa.properties.hibernate.format_sql=true
 ----
 
-**Understanding DDL-auto Configuration:**
+**Understanding DDL-auto Configuration**
 
 With `ddl-auto=none` and Flyway active, you rely entirely on Flyway scripts to define and evolve the schema safely and reproducibly. This approach:
 
@@ -216,16 +221,26 @@ With `ddl-auto=none` and Flyway active, you rely entirely on Flyway scripts to d
 ====
 Never use `ddl-auto=create` or `ddl-auto=create-drop` with Flyway in production! This could lead to data loss and schema conflicts.
 ====
+**Disable spring.jpa.open-in-view to avoid anti-pattern in configuration**
+[WARNING]
+====
+Explicit *spring.jpa.open-in-view=false* is the best practice in most cases. More details: how to overcome
+https://stackoverflow.com/questions/30549489/what-is-this-spring-jpa-open-in-view-true-property-in-spring-boot[The OSIV Anti-Pattern ]
+====
 
-**SQL Logging:**
+**SQL Logging**
 
 The `show-sql=true` setting displays all generated SQL queries in your application logs, which is invaluable for:
 
- * **Debugging** query performance issues
- * **Understanding** what Hibernate generates from your JPA queries
- * **Learning** how different JPA annotations translate to SQL
- * **Optimizing** database interactions
+* **Debugging** query performance issues
+* **Understanding** what Hibernate generates from your JPA queries
+* **Learning** how different JPA annotations translate to SQL
+* **Optimizing** database interactions
 
+[NOTE]
+====
+Optional: Consider other ways to show Hibernate/JPA SQL Statements. Take a look here: https://www.baeldung.com/sql-logging-spring-boot
+====
 
 === Accessing the H2 Console
 
