@@ -343,7 +343,7 @@ TREATMENT ||--o{ APPOINTMENT : is scheduled as
 
 == Creating Database Tables
 
-Create the migration file: `src/main/resources/db/migration/V0001__Create_schema.sql`
+Create the migration file: `src/main/resources/db/migration/1.0/V0001__Create_schema.sql`
 
 [IMPORTANT]
 ====
@@ -553,7 +553,7 @@ Indexes on foreign keys are crucial for:
 
 === Sample Data
 
-To provide realistic test data for our application, create the migration file `src/main/resources/db/migration/V0002__Create_mockdata.sql`.
+To provide realistic test data for our application, create the migration file `src/main/resources/db/migration/1.0/V0002__Create_mockdata.sql`.
 
 [TIP]
 ====
@@ -1478,6 +1478,7 @@ public class ClientRepositoryIT extends BaseDataJpaTest {
         // then
         assertThat(clients).isNotEmpty().hasSize(1);
         assertThat(clients.getFirst().getUser().getFirstName()).isEqualTo("Stefan");
+        assertThat(clients.getFirst().getUser().getLastName()).isEqualTo("Kowalski");
     }
 }
 ----
