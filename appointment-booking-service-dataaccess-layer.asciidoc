@@ -193,6 +193,11 @@ spring.flyway.locations=classpath:db/migration
 spring.flyway.enabled=true
 ----
 
+[NOTE]
+====
+*Think about it:* We're using Spring Boot's auto-configuration for Flyway, which runs migrations automatically on application startup. In which scenarios might you need to add the `flyway-maven-plugin` to your `pom.xml` instead? Consider CI/CD pipelines, manual database operations, and production deployment strategies.
+====
+
 ==== JPA and Hibernate Configuration
 [source,properties]
 ----
