@@ -47,14 +47,16 @@ Define a `SecurityFilterChain` bean with the following:
 * Enable the default login page at `/login`.
 * Enable logout via `/logout`.
 * Enable HTTP Basic Authentication for Swagger/Postman.
-* Disable CSRF (for the H2 Console and testing purposes).
-* Allow frames for the H2 Console.
+* Disable CSRF (for the H2 Console and testing purposes) - use code below
+* Allow frames for the H2 Console - use code below.
 
 [source,java]
 ----
 .csrf(AbstractHttpConfigurer::disable)
 .headers(headers -> headers.frameOptions().sameOrigin())
 ----
+
+Tip: You can take a look on training_examples.zip attached in materials (MS Teams files in 06-Security).
 
 === In-Memory UserDetailsService
 
