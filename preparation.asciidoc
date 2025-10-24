@@ -18,7 +18,7 @@ If you want to avoid problems during the training, please DO NOT use paths conta
 === Software List
 
 - *Git for Windows*: link:https://git-scm.com/download/win[Download]
-- *Apache Maven*: link:https://maven.apache.org/download.cgi[Download]
+- *Apache Maven* (Optional): link:https://maven.apache.org/download.cgi[Download] - Most Spring Boot projects use Maven Wrapper (`mvnw`), making separate installation not mandatory
 - *JDK 21*:
 ** For current recommendations, visit: link:https://whichjdk.com/[WhichJDK.com]
 ** Recommended: Adoptium OpenJDK (*_Eclipse Temurin_*): link:https://adoptium.net/[Download]
@@ -36,11 +36,16 @@ If you want to avoid problems during the training, please DO NOT use paths conta
 === Setup Instructions
 
 . Download and install *Git for Windows* from the provided link.
-. Download *Apache Maven* and extract it to a convenient location on your system (e.g. `C:\Programs`). Add the location to the `PATH` environment variable.
 . Choose and download *JDK 21* from either the Oracle JDK or OpenJDK options and install it.
 . Select and download an *IDE* of your choice (IntelliJ IDEA, Eclipse, or VSCode) for developing Spring Boot applications.
+. (Optional) Download *Apache Maven* and extract it to a location without spaces (e.g. `C:\Programs`). Add the location to the `PATH` environment variable.
 . Download and install *Postman* for testing your Spring Boot application's RESTful services.
 . Create a *Github* account (if you don't have any yet).
+
+[IMPORTANT]
+====
+**Maven Installation is Optional**: Spring Boot projects typically include Maven Wrapper (`mvnw.cmd`), which automatically downloads and uses the correct Maven version. Your IDE also has built-in Maven support. Only install Maven separately if you plan to use it from command line frequently.
+====
 
 Please follow the installation instructions on the download pages for each piece of software.
 
@@ -91,45 +96,67 @@ Scoop installs software in your user directory (`%USERPROFILE%\scoop`), so no ad
 
 After installation (whether traditional or via Scoop), verify your environment:
 
-- Please open terminal and test the environment. The outputs below may differ from the outputs on your environment.
-- Please test the installed JDK version
-+
---
+**1. Test JDK Installation**
+
+Open Command Prompt or PowerShell and run both commands:
+
 [source,bash]
---------
+----
+java -version
 javac -version
---------
---
-You should see in the output the same version you have installed, like this
-+
---
+----
+
+You should see output like:
+
 [source,bash]
---------
+----
+java version "21.0.2" 2024-01-16 LTS
+Java(TM) SE Runtime Environment (build 21.0.2+13-LTS-58)
+Java HotSpot(TM) 64-Bit Server VM (build 21.0.2+13-LTS-58, mixed mode, sharing)
+
 javac 21.0.2
---------
---
-If you don't see the proper version, check whether your JDK installation is added to the `PATH` environment variable or whether you have set the `JAVA_HOME` variable properly.
-- Please test the Maven installation
-+
---
+----
+
+[WARNING]
+====
+**Common JDK Issues:**
+
+- **"java is not recognized"**: JDK not in PATH - reinstall JDK or manually add to PATH
+- **Wrong version shown**: Multiple Java versions installed - check JAVA_HOME environment variable
+- **javac not found**: JRE installed instead of JDK - download full JDK, not just JRE
+====
+
+**2. Test Maven Installation (Optional)**
+
+If you installed Maven separately:
+
 [source,bash]
---------
+----
 mvn -v
---------
---
-You should see the output like this
-+
---
+----
+
+Expected output:
+
 [source,bash]
---------
+----
 Apache Maven 3.9.5 (57804ffe001d7215b5e7bcb531cf83df38f93546)
-Maven home: /home/ksobkowiak/.m2/wrapper/dists/apache-maven-3.9.5-bin/32db9c34/apache-maven-3.9.5
-Java version: 21.0.2, vendor: Eclipse Adoptium, runtime: /home/ksobkowiak/.sdkman/candidates/java/21.0.2-tem
-Default locale: en, platform encoding: UTF-8
-OS name: "linux", version: "5.15.133.1-microsoft-standard-wsl2", arch: "amd64", family: "unix"
---------
---
-You should see the Maven version `3.9+`. Maven output should print the usage of the proper JDK version.
+Maven home: C:\Programs\apache-maven-3.9.5
+Java version: 21.0.2, vendor: Eclipse Adoptium
+Default locale: en_US, platform encoding: UTF-8
+OS name: "windows 10", version: "10.0", arch: "amd64", family: "windows"
+----
+
+[NOTE]
+====
+**If Maven verification fails**: Don't worry! Spring Boot projects use Maven Wrapper (`mvnw.cmd`), so manual Maven installation isn't required. Your IDE will handle Maven operations automatically.
+====
+
+**3. Test IDE Setup**
+
+- Open your chosen IDE
+- Verify it detects Java 21 in project settings
+- For IntelliJ: File → Project Structure → Project → Project SDK should show Java 21
+- For Eclipse: Window → Preferences → Java → Installed JREs should list Java 21
 
 == Navigation
 [grid=cols]
