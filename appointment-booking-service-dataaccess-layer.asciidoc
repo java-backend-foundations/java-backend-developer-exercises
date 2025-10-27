@@ -475,12 +475,12 @@ Notice that APPOINTMENT has TWO foreign keys. This is different from the one-to-
 
 === Database Sequences
 
-Create sequences for ID generation:
+https://www.postgresql.org/docs/current/sql-createsequence.html[Create sequences for ID generation]:
 
 [source,sql]
 ----
-CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
-CREATE SEQUENCE CLIENT_SEQ START WITH 1 INCREMENT BY 100 NOCYCLE;
+CREATE SEQUENCE USER_SEQ START WITH 1 INCREMENT BY 100 NO CYCLE;
+CREATE SEQUENCE CLIENT_SEQ START WITH 1 INCREMENT BY 100 NO CYCLE;
 -- Create the next required sequences. How many should there be in total?
 ----
 
@@ -506,9 +506,10 @@ Some IDs may be lost, but this is acceptable in most cases since primary keys ar
 *What if you have multiple server instances sharing the same database?*
 Each instance will request its own block of IDs. Matching allocationSize and sequence increment ensures that each instance gets a distinct, non-overlapping range, avoiding collisions.
 
-*What does NOCYCLE mean?*
-It ensures that the sequence never wraps around when it reaches its maximum value. This guarantees uniqueness and prevents accidental reuse of IDs.
-
+*What does NO CYCLE mean?*
+In PostgreSQL, NO CYCLE is the default behavior when creating a sequence. This means that once the sequence reaches its maximum (MAXVALUE) or minimum (MINVALUE), it will not wrap around and restart. Instead, it stops generating new values, which helps ensure uniqueness — especially important for primary keys.
+Although it's the default, explicitly specifying NO CYCLE is considered good practice for clarity, maintainability, and to avoid surprises during migrations or when using tools that might override defaults.
+In Oracle, the concept is the same, but the syntax differs slightly — the keyword is written as NOCYCLE (without a space). As in PostgreSQL, it's also the default, but often included explicitly for readability and safety.
 In the next section, <<entity-implementation>>, we will configure JPA entities to use these sequences properly using `@SequenceGenerator`.
 ====
 
