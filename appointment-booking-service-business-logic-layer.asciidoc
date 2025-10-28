@@ -94,7 +94,15 @@ com.capgemini.training.appointmentbooking.logic
 
 For each entity we will create the two interfaces -- one for _Read_ and one for _Write_ operations. For `Treatment` the interfaces should look as follows:
 
-NOTE: To facilitate Treatment creation, define the transfer object which contains _name_, _description_, _durationMinutes_ and _specialistId_. This ensures that all necessary data is provided.
+To facilitate Treatment creation, define the transfer object which contains _name_, _description_, _durationMinutes_ and _specialistId_. This ensures that all necessary data is provided.
+
+[source,java]
+----
+@Builder
+public record TreatmentCreationTo(@NotNull @Size(min = 5, max = 20) String name,
+		@NotNull @Size(min = 5, max = 80) String description, @Min(1) int durationMinutes, @NotNull Long specialistId) {
+}
+----
 
 [source,java]
 ----
